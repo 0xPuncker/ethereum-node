@@ -1,0 +1,67 @@
+# .pre-commit-config.yaml
+# Works for Terraform 1.5+ / 1.6+ and Terragrunt (optional).
+# Requires: terraform (or tfenv), tflint, terragrunt (optional).
+
+repos:
+  # --- Terraform hooks (fmt/validate/tflint/tflocks/tfsec optional) ---
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.88.4
+    hooks:
+      - id: terraform_fmt
+        args: [--recursive]
+      - id: terraform_validate
+        args: [--recursive]
+        additional_dependencies: []
+      - id: terraform_tflint
+        args:
+          - --args=--config=./.tflint.hcl
+          - --hook-config=--recursive
+      - id: terraform_providers_lock
+        name: "terraform providers lock (linux, darwin, windows)"
+        args:
+          [
+            --args=-platform=linux_amd64 --args=-platform=darwin_amd64 --args=-platform=windows_amd64,
+          ]
+        files: ^.*\.tf$
+      - id: terraform_trivy
+        args: [--args=--exclude-downloaded-modules]
+
+  # --- Terragrunt hooks (optional) ---
+  #- repo: https://github.com/gruntwork-io/pre-commit
+  #  rev: v0.1.25
+  #  hooks:
+  #    - id: terragrunt_hclfmt
+  #      files: ^.*\.hcl$
+
+  # --- General hygiene: whitespace, EOF, large files, merge conflicts ---
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: detect-private-key
+
+  # --- Markdown lint (docs, READMEs) ---
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.42.0
+    hooks:
+      - id: markdownlint
+        args: ["--config", ".markdownlint.jsonc"]
+        files: ^.*\.md$
+
+  # --- Prettier for JSON / YAML / Markdown formatting (optional but nice) ---
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: ^.*\.(json|ya?ml|md)$
+        additional_dependencies: ["prettier@^3"]
+
+ci:
+  autofix_prs: true
+  skip: []

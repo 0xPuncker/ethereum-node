@@ -1,0 +1,55 @@
+{
+  "name": "ethereum-node",
+  "version": "1.0.0",
+  "description": "Ethereum Node git-commit tool",
+  "directories": {
+    "doc": "docs"
+  },
+  "release": {
+    "branches": [
+      "develop"
+    ]
+  },
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/github",
+    "@semantic-release/npm",
+    {
+      "npmPublish": false
+    }
+  ],
+  "scripts": {
+    "commit": "git-cz",
+    "release": "semantic-release"
+  },
+  "config": {
+    "commitizen": {
+      "path": "git-cz"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xPuncker/ethereum-node.git"
+  },
+  "keywords": [
+    "ethereum",
+    "ansible",
+    "terraform",
+    "hoodi",
+    "holesky",
+    "testnet"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/0xPuncker/ethereum-node/issues"
+  },
+  "homepage": "https://github.com/0xPuncker/ethereum-node#readme",
+  "devDependencies": {
+    "@semantic-release/github": "^11.0.6",
+    "git-cz": "^4.9.0",
+    "semantic-release": "^24.2.9"
+  }
+}
