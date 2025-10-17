@@ -4,7 +4,7 @@
 #   ansible-playbook playbooks/deploy_validator.yml
 
 - name: Deploy Ethereum Validator (Nethermind + Nimbus)
-  hosts: eth-validator
+  hosts: eth_validator
   become: true
   gather_facts: true
 

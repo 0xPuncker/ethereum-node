@@ -5,7 +5,7 @@ nimbus_version: "latest"
 nimbus_beacon_bin: "/usr/local/bin/nimbus_beacon_node"
 nimbus_validator_bin: "/usr/local/bin/nimbus_validator_client"
 nimbus_data_dir: "{{ mount_point }}/nimbus"
-nimbus_validator_data_dir: "{{ mount_point }}/nimbus_data"
+nimbus_validator_data_dir: "{{ mount_point }}/nimbus_validator"
 nimbus_user: "consensus"
 nimbus_group: "consensus"
 

@@ -2,7 +2,7 @@
 # Playbook to install EthStaker deposit-cli and generate validator mnemonic
 
 - name: Setup staking-deposit CLI
-  hosts: eth-validator
+  hosts: eth_validator
   become: true
   gather_facts: true
 

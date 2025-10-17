@@ -1,0 +1,46 @@
+# GCP Configuration for Ethereum Validator Deployment
+# Copy this file to .envrc and fill in your values
+#
+# Usage:
+#   cp .envrc.example .envrc
+#   # Edit .envrc with your values
+#   source .envrc  # or use direnv
+#
+# Note: .envrc is gitignored to prevent accidental credential exposure
+
+# GCP Project Configuration
+export GCP_PROJECT="your-gcp-project-id"              # Your GCP project ID
+export GCP_PROJECT_NUMBER=""                          # Auto-populated by scripts, leave empty
+export GCP_REGION="us-central1"                       # GCP region for resources
+export GCP_ZONE="us-central1-a"                       # GCP zone for VM
+
+# VM Configuration (auto-populated after Terraform runs)
+export VM_EXTERNAL_IP=""                              # Leave empty, populated by Terraform
+export ANSIBLE_USER=""                                # Leave empty, populated by Terraform
+
+# Cloud KMS Configuration
+export KMS_LOCATION="us-central1"                     # KMS location (usually same as region)
+export KMS_KEYRING="eth-node-keyring"                 # KMS keyring name
+export KMS_KEY="eth-node"                             # KMS crypto key name
+export KMS_KEY_ID=""                                  # Leave empty, populated by Terraform
+
+# Cloud Storage Configuration (for Terraform state backend)
+export GCS_BUCKET="eth-node-terraform-state"          # GCS bucket for Terraform state (must be globally unique)
+export GCS_PREFIX="eth-node/state"                    # Prefix for Terraform state in bucket
+
+# Validator Keys Storage Configuration
+export VALIDATOR_KEYS_BUCKET="your-validator-keys-bucket"  # GCS bucket for encrypted validator keys (must be globally unique)
+export VALIDATOR_KEYS_PREFIX="validator-keys"         # Prefix for validator keys in bucket
+
+# Optional: Testnet Configuration
+export TESTNET_NETWORK="hoodi"                        # hoodi or holesky
+
+# Optional: Validator Configuration
+export FEE_RECIPIENT_ADDRESS="0x..."                  # Your Ethereum address for validator rewards
+export VALIDATOR_GRAFFITI="Your Validator Name"      # Custom graffiti for blocks
+
+# To use this file:
+# 1. Copy to .envrc: cp .envrc.example .envrc
+# 2. Edit .envrc with your actual values
+# 3. Source it: source .envrc
+# 4. Or use direnv: direnv allow

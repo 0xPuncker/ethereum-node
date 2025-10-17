@@ -3,7 +3,7 @@
 # Usage: ansible-playbook playbooks/validate.yml
 
 - name: Validate Ethereum Validator Deployment
-  hosts: eth-validator
+  hosts: eth_validator
   become: true
   gather_facts: true
 

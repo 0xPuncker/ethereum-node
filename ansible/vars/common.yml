@@ -13,7 +13,7 @@ systemd_dir: "/etc/systemd/system"
 # Data directories (all on external persistent disk)
 nethermind_data_dir: "{{ mount_point }}/nethermind"
 nimbus_data_dir: "{{ mount_point }}/nimbus/beacon"
-nimbus_validator_data_dir: "{{ mount_point }}/nimbus_data"
+nimbus_validator_data_dir: "{{ mount_point }}/nimbus_validator"
 secrets_dir: "{{ mount_point }}/secrets"
 
 # JWT secret

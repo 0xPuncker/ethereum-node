@@ -36,6 +36,3 @@
       - "=== SSH Configuration Applied ==="
       - "SSH configuration has been updated and validated."
       - "Service was NOT restarted to prevent connection loss."
-      - "If you need to apply SSH changes immediately, manually run:"
-      - "  sudo systemctl restart ssh"
-      - "WARNING: Only restart SSH when you have console access!"

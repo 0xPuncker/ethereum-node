@@ -3,7 +3,7 @@
 # Usage: ansible-playbook playbooks/restart_services.yml
 
 - name: Gracefully Restart Ethereum Validator Services
-  hosts: eth-validator
+  hosts: eth_validator
   become: true
 
   vars_files:

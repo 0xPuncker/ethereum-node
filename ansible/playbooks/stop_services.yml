@@ -3,7 +3,7 @@
 # Usage: ansible-playbook playbooks/stop_services.yml
 
 - name: Stop Ethereum Validator Services
-  hosts: eth-validator
+  hosts: eth_validator
   become: true
 
   vars_files:

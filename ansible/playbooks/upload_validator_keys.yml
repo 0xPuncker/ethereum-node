@@ -6,7 +6,7 @@
 # 3. GCS bucket created and accessible
 
 - name: Encrypt and Upload Validator Keys to GCS
-  hosts: eth-validator
+  hosts: eth_validator
   become: true
   gather_facts: true
 

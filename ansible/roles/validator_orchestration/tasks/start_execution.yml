@@ -32,6 +32,3 @@
       - ""
       - "Recent logs:"
       - "{{ execution_logs.stdout_lines[-10:] | join('\n') }}"
-      - ""
-      - "Note: Execution client will sync in background. Monitor with:"
-      - "  sudo journalctl -fu execution | ccze"
