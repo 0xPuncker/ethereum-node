@@ -1,0 +1,19 @@
+project_id             = "<gcp_project_id"        # Google Cloud project ID
+region                 = "<gcp_region>"           # Google Cloud region
+zone                   = "<zone_name>"            # Google Cloud zone
+resource_prefix         = "<stack_name>"
+machine_type           = "n1-custom-8-32768"      # Machine name (using custom)
+subnet_cidr            = "10.42.0.0/24"           # Subnet CIDR
+firewall_allowed_ports  = ["443", "30303", "9000"] # HTTPS, Geth P2P, Lighthouse P2P (SSH is handled separately)
+firewall_source_ranges  = ["0.0.0.0/0"]            # Public access for P2P and HTTPS (SSH uses dynamic IP restriction)
+
+boot_disk = {
+  image = "projects/ubuntu-os-cloud/global/images/family/ubuntu-minimal-2404-lts-amd64" # Ubuntu image ISO name
+  type  = "pd-ssd"  # Standard SSD
+  size  = 200       # Disk size
+}
+
+data_disk = {
+  type = "pd-ssd"   # Standard SSD (May you can facing some GCP quota issues )
+  size = 1000       # Disk size
+}

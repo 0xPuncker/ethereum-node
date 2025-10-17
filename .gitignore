@@ -36,9 +36,8 @@ terraform/plans/
 .terraformrc
 terraform.rc
 
-# Ignore CLI configuration files
-.terraformrc
-terraform.rc
+# Lock
+.terraform.lock.hcl*
 
 # Terragrunt cache
 **/.terragrunt-cache/*
@@ -51,6 +50,8 @@ terraform.rc
 
 # Secure files (SSH keys, secrets)
 secure/*
+ansible/secure/*
+ansible/inventory/hosts.yml.backup*
 
 # IDE
 .idea/
