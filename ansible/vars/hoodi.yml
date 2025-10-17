@@ -1,0 +1,21 @@
+---
+# Hoodi testnet specific variables
+
+testnet_network: "hoodi"
+testnet_chain_id: 17001
+
+# Checkpoint sync
+checkpoint_sync_url: "https://hoodi.beaconstate.ethstaker.cc"
+
+# Launchpad
+launchpad_url: "https://hoodi.launchpad.ethereum.org/"
+
+# Explorer
+explorer_url: "https://hoodi.beaconcha.in"
+
+# Deposit requirements
+deposit_amount: "32000000000"  # 32 ETH in Gwei
+
+# Network configuration
+nethermind_network_config: "hoodi"
+nimbus_network_config: "hoodi"

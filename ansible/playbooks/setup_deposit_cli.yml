@@ -1,0 +1,14 @@
+---
+# Playbook to install EthStaker deposit-cli and generate validator mnemonic
+
+- name: Setup staking-deposit CLI
+  hosts: eth-validator
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - ../vars/common.yml
+    - "../vars/{{ testnet_network | default('hoodi') }}.yml"
+
+  roles:
+    - role: generate_validator_keys

@@ -1,0 +1,93 @@
+#!/bin/bash
+# Validator Key Decryption Script
+# Fetches encrypted keys from GCS and decrypts using Cloud KMS
+# Decrypted keys stored in tmpfs (memory-only)
+
+set -euo pipefail
+
+# Set HOME for gcloud (avoid /nonexistent issue)
+export HOME=/tmp
+export CLOUDSDK_CONFIG=/tmp/.gcloud
+
+# Configuration
+GCP_PROJECT="{{ gcp_project_id }}"
+KMS_KEYRING="{{ kms_keyring_name }}"
+KMS_KEY="{{ kms_key_name }}"
+KMS_LOCATION="{{ kms_location }}"
+GCS_BUCKET="{{ gcs_bucket_name }}"
+GCS_PREFIX="{{ gcs_encrypted_keys_prefix }}"
+ENCRYPTED_DIR="{{ validator_keys_encrypted_dir }}"
+DECRYPTED_DIR="{{ validator_keys_decrypted_dir }}"
+OWNER="{{ validator_keys_owner }}"
+
+# Logging
+log() {
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" | systemd-cat -t validator-keys
+}
+
+log "Starting validator key decryption process..."
+
+# Verify tmpfs is mounted
+if ! mountpoint -q "$DECRYPTED_DIR"; then
+    log "ERROR: Decrypted keys directory is not a tmpfs mount!"
+    exit 1
+fi
+
+# Clean any existing decrypted keys
+rm -rf "$DECRYPTED_DIR"/*
+log "Cleaned decrypted keys directory"
+
+# Check if encrypted keys exist in GCS
+KEY_COUNT=$(gcloud storage ls "gs://$GCS_BUCKET/$GCS_PREFIX/" 2>/dev/null | wc -l || echo "0")
+KEY_COUNT=$(echo "$KEY_COUNT" | tr -d '[:space:]')  # Remove whitespace
+
+if [ "$KEY_COUNT" -eq 0 ]; then
+    log "WARNING: No encrypted validator keys found in GCS bucket"
+    log "Bucket: gs://$GCS_BUCKET/$GCS_PREFIX/"
+    log "Please upload encrypted keys before starting validator service"
+    exit 0  # Not fatal - validator may not have keys yet
+fi
+
+log "Found $KEY_COUNT encrypted key file(s) in GCS"
+
+# Download encrypted keys from GCS
+log "Downloading encrypted keys from GCS..."
+gcloud storage cp -r "gs://$GCS_BUCKET/$GCS_PREFIX/*" "$ENCRYPTED_DIR/" \
+    --project="$GCP_PROJECT" 2>&1 | systemd-cat -t validator-keys
+
+# Decrypt each key file
+for ENCRYPTED_FILE in "$ENCRYPTED_DIR"/*.enc; do
+    if [ ! -f "$ENCRYPTED_FILE" ]; then
+        continue
+    fi
+
+    BASENAME=$(basename "$ENCRYPTED_FILE" .enc)
+    DECRYPTED_FILE="$DECRYPTED_DIR/$BASENAME"
+
+    log "Decrypting: $BASENAME"
+
+    # Decrypt using Cloud KMS
+    gcloud kms decrypt \
+        --project="$GCP_PROJECT" \
+        --location="$KMS_LOCATION" \
+        --keyring="$KMS_KEYRING" \
+        --key="$KMS_KEY" \
+        --ciphertext-file="$ENCRYPTED_FILE" \
+        --plaintext-file="$DECRYPTED_FILE" 2>&1 | systemd-cat -t validator-keys
+
+    # Set strict permissions
+    chmod 600 "$DECRYPTED_FILE"
+    chown "$OWNER:$OWNER" "$DECRYPTED_FILE"
+
+    log "Successfully decrypted: $BASENAME"
+done
+
+# Set directory permissions
+chmod 700 "$DECRYPTED_DIR"
+chown "$OWNER:$OWNER" "$DECRYPTED_DIR"
+
+DECRYPTED_COUNT=$(find "$DECRYPTED_DIR" -type f | wc -l)
+log "Decryption complete: $DECRYPTED_COUNT key(s) ready"
+log "Decrypted keys available at: $DECRYPTED_DIR"
+
+exit 0

@@ -1,0 +1,69 @@
+#!/usr/bin/expect -f
+#
+# Helper script to automate EthStaker deposit-cli mnemonic confirmation flow.
+#
+
+set timeout -1
+
+if {[llength $argv] < 8} {
+  puts stderr "Usage: staking_deposit_expect <deposit_bin> <validators> <chain> <workspace_dir> <fee_recipient> <keystore_password> <language> <mnemonic_file>"
+  exit 1
+}
+
+set deposit_bin       [lindex $argv 0]
+set validators        [lindex $argv 1]
+set chain             [lindex $argv 2]
+set workspace_dir     [lindex $argv 3]
+set execution_address [lindex $argv 4]
+set keystore_password [lindex $argv 5]
+set language          [lindex $argv 6]
+set mnemonic_file     [lindex $argv 7]
+
+set mnemonic ""
+
+set cmd [list $deposit_bin --non_interactive --language $language new-mnemonic --mnemonic_language $language --num_validators $validators --chain $chain --folder $workspace_dir --execution_address $execution_address --keystore_password $keystore_password --regular-withdrawal]
+
+log_user 0
+spawn {*}$cmd
+log_user 1
+
+proc write_mnemonic {mnemonic_file mnemonic} {
+  if {$mnemonic_file eq ""} {
+    return
+  }
+  set fh [open $mnemonic_file "w"]
+  puts $fh $mnemonic
+  close $fh
+}
+
+expect {
+  -re {Please enter yes if you want to generate compounding validators.*\[no\]:} {
+    exp_send "no\r"
+    exp_continue
+  }
+  -re {([a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+)} {
+    set mnemonic [string trim $expect_out(1,string)]
+    write_mnemonic $mnemonic_file $mnemonic
+    exp_continue
+  }
+  -re {Please type your mnemonic .* to confirm.*:} {
+    if {$mnemonic eq ""} {
+      puts stderr "Mnemonic was not captured; cannot confirm."
+      exit 1
+    }
+    exp_send -- "$mnemonic\r"
+    exp_continue
+  }
+  -re {Press any key when you have written down your mnemonic\.} {
+    exp_send "\r"
+    exp_continue
+  }
+  eof {
+    set result [wait]
+    set exit_status [lindex $result 3]
+    if {$mnemonic ne "" && $mnemonic_file ne ""} {
+      file attributes $mnemonic_file -permissions 0600
+    }
+    exit $exit_status
+  }
+}

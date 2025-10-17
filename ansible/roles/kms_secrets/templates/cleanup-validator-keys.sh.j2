@@ -1,0 +1,47 @@
+#!/bin/bash
+# Validator Key Cleanup Script
+# Securely wipes decrypted keys from memory (tmpfs)
+
+set -euo pipefail
+
+# Configuration
+DECRYPTED_DIR="{{ validator_keys_decrypted_dir }}"
+
+# Logging
+log() {
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" | systemd-cat -t validator-keys
+}
+
+log "Starting validator key cleanup process..."
+
+# Verify tmpfs is mounted
+if ! mountpoint -q "$DECRYPTED_DIR"; then
+    log "WARNING: Decrypted keys directory is not a tmpfs mount"
+fi
+
+# Count keys before cleanup
+KEY_COUNT=$(find "$DECRYPTED_DIR" -type f 2>/dev/null | wc -l || echo "0")
+KEY_COUNT=$(echo "$KEY_COUNT" | tr -d '[:space:]')  # Remove whitespace
+
+if [ "$KEY_COUNT" -eq 0 ]; then
+    log "No decrypted keys found - nothing to cleanup"
+    exit 0
+fi
+
+log "Found $KEY_COUNT decrypted key(s) to cleanup"
+
+# Securely wipe files before deletion
+for KEY_FILE in "$DECRYPTED_DIR"/*; do
+    if [ -f "$KEY_FILE" ]; then
+        # Overwrite with random data before deletion
+        shred -vfz -n 3 "$KEY_FILE" 2>&1 | systemd-cat -t validator-keys || true
+        log "Wiped: $(basename "$KEY_FILE")"
+    fi
+done
+
+# Remove directory contents
+rm -rf "$DECRYPTED_DIR"/*
+
+log "Cleanup complete: All decrypted keys securely wiped from memory"
+
+exit 0

@@ -1,0 +1,58 @@
+---
+# Common variables across all testnets
+
+# System requirements
+min_cpu_cores: 4
+min_memory_gb: 30
+min_disk_gb: 500
+
+# Installation directories
+bin_dir: "/usr/local/bin"
+systemd_dir: "/etc/systemd/system"
+
+# Data directories (all on external persistent disk)
+nethermind_data_dir: "{{ mount_point }}/nethermind"
+nimbus_data_dir: "{{ mount_point }}/nimbus/beacon"
+nimbus_validator_data_dir: "{{ mount_point }}/nimbus_data"
+secrets_dir: "{{ mount_point }}/secrets"
+
+# JWT secret
+jwt_secret_path: "{{ secrets_dir }}/jwtsecret"
+
+# Client versions
+nethermind_version: "latest"
+nimbus_version: "latest"
+deposit_cli_version: "v1.2.2"
+
+# Log settings
+journal_max_size: "10G"
+journal_max_time: "30d"
+
+# Security settings
+enable_firewall: true
+enable_fail2ban: false
+enable_ntp: true
+
+# SSH configuration
+ssh_port: 22
+ssh_pubkey_auth: yes
+ssh_password_auth: no
+ssh_root_login: "prohibit-password"
+
+# Essential packages
+essential_packages:
+  - git
+  - curl
+  - jq
+  - ccze
+  - unzip
+  - libsnappy-dev
+  - libc6-dev
+  - build-essential
+
+# NTP servers
+ntp_servers:
+  - 0.ubuntu.pool.ntp.org
+  - 1.ubuntu.pool.ntp.org
+  - 2.ubuntu.pool.ntp.org
+  - 3.ubuntu.pool.ntp.org

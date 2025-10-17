@@ -1,0 +1,46 @@
+#!/usr/bin/expect -f
+#
+# Helper script to automate EthStaker deposit-cli with existing mnemonic.
+#
+
+set timeout -1
+
+if {[llength $argv] < 9} {
+  puts stderr "Usage: staking_deposit_existing <deposit_bin> <validators> <chain> <workspace_dir> <fee_recipient> <keystore_password> <language> <mnemonic> <start_index>"
+  exit 1
+}
+
+set deposit_bin       [lindex $argv 0]
+set validators        [lindex $argv 1]
+set chain             [lindex $argv 2]
+set workspace_dir     [lindex $argv 3]
+set execution_address [lindex $argv 4]
+set keystore_password [lindex $argv 5]
+set language          [lindex $argv 6]
+set mnemonic          [lindex $argv 7]
+set start_index       [lindex $argv 8]
+
+set cmd [list $deposit_bin --non_interactive --language $language existing-mnemonic --mnemonic_language $language --validator_start_index $start_index --num_validators $validators --chain $chain --folder $workspace_dir --execution_address $execution_address --keystore_password $keystore_password]
+
+log_user 1
+spawn {*}$cmd
+
+expect {
+  -re {Please enter your mnemonic separated by spaces.*:} {
+    exp_send -- "$mnemonic\r"
+    exp_continue
+  }
+  -re {Please repeat the index.*:} {
+    exp_send -- "$start_index\r"
+    exp_continue
+  }
+  eof {
+    set result [wait]
+    set exit_status [lindex $result 3]
+    exit $exit_status
+  }
+  timeout {
+    puts stderr "Timeout waiting for deposit-cli"
+    exit 1
+  }
+}
