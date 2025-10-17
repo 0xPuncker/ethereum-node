@@ -4,6 +4,8 @@ vars:
   TERRAFORM: "tofu"
   TERRAFORM_DIR: ./terraform
   ANSIBLE_DIR: ./ansible
+  SCRIPTS_DIR: "{{.ANSIBLE_DIR}}/scripts"
+  ROOT_SCRIPTS_DIR: "./scripts"
   ANSIBLE_INVENTORY: "{{.ANSIBLE_DIR}}/inventory/hosts.yml"
   ANSIBLE_PLAYBOOK: "{{.ANSIBLE_DIR}}/playbooks/provision.yml"
   ANSIBLE_USER:
@@ -18,7 +20,6 @@ vars:
           printf '%s\n' "root"
         fi
       fi
-  SCRIPTS_DIR: "{{.ANSIBLE_DIR}}/scripts"
 
 tasks:
   # OpenTofu (Infrastructure)
@@ -42,6 +43,7 @@ tasks:
 
   tf:destroy:
     desc: Destroy Terraform infrastructure
+    prompt: "Destroy Terraform infrastructure? Type yes to continue:"
     dir: "{{.TERRAFORM_DIR}}"
     cmds:
       - "{{.TERRAFORM}} destroy"
@@ -108,7 +110,7 @@ tasks:
     desc: Run deployment with specific tags (usage - task ansible:deploy-tags -- TAG={setup, nethermind, nimbus or services })
     dir: "{{.ANSIBLE_DIR}}"
     vars:
-      CLI_TAG: "{{join \" \" .CLI_ARGS}}"
+      CLI_TAG: '{{join " " .CLI_ARGS}}'
     cmds:
       - |
         TAG_VALUE="{{.TAG}}"
@@ -134,12 +136,14 @@ tasks:
 
   ansible:stop:
     desc: Stop validator services
+    prompt: "Stop validator services? (yes/no)"
     dir: "{{.ANSIBLE_DIR}}"
     cmds:
       - ansible-playbook playbooks/stop_services.yml -i inventory/hosts.yml
 
   ansible:restart:
     desc: Gracefully restart validator services (stop → start with health checks)
+    prompt: "Restart validator services now? (yes/no)"
     dir: "{{.ANSIBLE_DIR}}"
     cmds:
       - ansible-playbook playbooks/restart_services.yml -i inventory/hosts.yml
@@ -185,6 +189,22 @@ tasks:
     cmds:
       - "{{.SCRIPTS_DIR}}/upload-keystore-password.sh"
 
+  # Project scripts
+  scripts:provision:
+    desc: Run local provisioning helper script
+    cmds:
+      - "{{.ROOT_SCRIPTS_DIR}}/provision.sh"
+
+  scripts:check-health:
+    desc: Check validator health via helper script
+    cmds:
+      - "{{.ROOT_SCRIPTS_DIR}}/check-health.sh"
+
+  scripts:start-validator:
+    desc: Start validator using helper script
+    cmds:
+      - "{{.ROOT_SCRIPTS_DIR}}/start-validator.sh"
+
   # Validator (Service orchestration)
   validator:start:
     desc: Start validator services via Ansible
@@ -193,13 +213,20 @@ tasks:
 
   validator:stop:
     desc: Stop validator services via Ansible
+    prompt: "Stop validator services on the remote host? (yes/no)"
     cmds:
       - task: ansible:stop
 
   validator:restart:
     desc: Restart validator services via Ansible (requires confirmation)
+    prompt: "Restart all validator services via Ansible? (yes/no)"
     cmds:
       - task: ansible:restart
+
+  validator:upload-keys:
+    desc: Encrypt and upload validator keys to GCS
+    cmds:
+      - task: ansible:upload-keys
 
   validator:deploy:infra:
     desc: Provision Terraform infrastructure (init → plan → apply)
@@ -226,7 +253,7 @@ tasks:
       - task: ansible:upload-keys
       - task: ansible:upload-passwords
       - task: ansible:deploy-tags
-        vars: {TAG: "nimbus"}
+        vars: { TAG: "nimbus" }
       - task: ansible:restart
 
   validator:deploy:finalize:
@@ -255,9 +282,9 @@ tasks:
       - ssh {{.ANSIBLE_USER}}@$(cd {{.TERRAFORM_DIR}} && tofu output -raw vm_external_ip) 'sudo journalctl -u execution -u consensus -u validator -f'
 
   validator:logs-error:
-     desc: Search for errors in validator service logs (last 1 hour)
-     cmds:
-       - ssh {{.ANSIBLE_USER}}@$(cd {{.TERRAFORM_DIR}} && tofu output -raw vm_external_ip) 'sudo journalctl -u execution -u consensus -u validator --since "1 hour ago" | grep -i error'
+    desc: Search for errors in validator service logs (last 1 hour)
+    cmds:
+      - ssh {{.ANSIBLE_USER}}@$(cd {{.TERRAFORM_DIR}} && tofu output -raw vm_external_ip) 'sudo journalctl -u execution -u consensus -u validator --since "1 hour ago" | grep -i error'
 
   validator:deploy:all:
     desc: Provision infra, configure validator, upload keys, reload validator, and validate
