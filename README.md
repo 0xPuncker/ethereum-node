@@ -1,7 +1,7 @@
 # Ethereum Testnet Validator
 
 <p align="center">
-  <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png?v=032" alt="Ethereum Hoodi Logo" width="200"/>
+  <img src="https://beincrypto.com/wp-content/uploads/2024/09/bic_EthereumPoW_ETHW_3-covers_neutral.jpg" alt="Ethereum Hoodi Testnet" width="200"/>
 </p>
 
 Deploy a **production-grade Ethereum validator** on a public testnet using "one-click deployment" from a clean environment.
@@ -10,7 +10,6 @@ Deploy a **production-grade Ethereum validator** on a public testnet using "one-
 
 ## 📑 Table of Contents
 
-- [Challenge Achievement Status](#-implementation-status)
 - [Current Architecture](#️-current-architecture)
 - [Prerequisites](#-prerequisites)
 - [Quick Start](#-quick-start)
@@ -92,15 +91,6 @@ Deploy a **production-grade Ethereum validator** on a public testnet using "one-
 - **SSH**: Key-based authentication to target VM
 - **Git**: For cloning repository
 
-### Packages
-
-```bash
-sudo apt update
-sudo apt install -y software-properties-common
-sudo add-apt-repository --yes --update ppa:ansible/ansible
-sudo apt install -y ansible
-```
-
 ## 🚀 Quick Start
 
 **These are the ONLY 3 commands needed from a clean environment:**
@@ -162,6 +152,7 @@ sudo ./scripts/start-validator.sh
 - Queries consensus client REST API (port 5052)
 - Displays sync status (syncing vs synced)
 - Shows peer connections
+- Shows serivices status
 - Reports validator status (if keys imported)
 - Displays resource usage (disk, memory)
 - Returns exit code 0 (healthy) or 1 (unhealthy)
@@ -245,14 +236,14 @@ all:
 
 ### Testnet Selection
 
-- **Holesky** (default): Recommended, stable, active validator set
-- **Sepolia**: Alternative testnet, smaller validator set
+- **Hoodi** (default): Recommended, stable, active validator set
+- **Holesky**: Alternative testnet, smaller validator set
 
 Change in `ansible/vars/common.yml` or inventory
 
 ## 📝 Project Structure
 
-```	hereum-node/
+```ethereum-node/
 ├── scripts/
 │   ├── provision.sh                # Command 1: Infrastructure setup
 │   ├── start-validator.sh          # Command 2: Start validator
@@ -275,8 +266,9 @@ Change in `ansible/vars/common.yml` or inventory
 │   ├── inventory/
 │   │   └── hosts.yml                   # Target hosts config
 │   └── vars/
-│       └── common.yml                  # Common variables
-│       └── holesky.yml
+│       └── common.yml                  # Common node variables
+│       └── holesky.yml                 # Testnet holesky variables
+│       └── hoodi.yml                   # Testnet hoodi variables
 │
 ├── terraform/                 # GCP infrastructure (optional)
 │   ├── main.tf                # VM provisioning
@@ -293,7 +285,7 @@ Change in `ansible/vars/common.yml` or inventory
 
 - [Architecture](docs/ARCHITECTURE.md) - System architecture and design decisions
 - [KMS Key Management](docs/KMS_KEY_MANAGEMENT.md) - KMS keys and management
-- [Ansible README](ansible/README.md) - Detailed Ansible automation guide
+- [Ansible Guide](ansible/README.md) - Detailed Ansible automation guide
 - [Hoodi Validator Registration](docs/HOODI_VALIDATOR_REGISTRATION.md) - Detailed Hoodi validator registration
 - [Runbook](docs/RUNBOOK.md) - Runbook
 
