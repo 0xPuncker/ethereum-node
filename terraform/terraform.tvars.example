@@ -1,8 +1,8 @@
-project_id             = "<gcp_project_id"        # Google Cloud project ID
-region                 = "<gcp_region>"           # Google Cloud region
-zone                   = "<zone_name>"            # Google Cloud zone
-resource_prefix         = "<stack_name>"
-machine_type           = "n1-custom-8-32768"      # Machine name (using custom)
+project_id             = "<gcp_project_id>"       # Google Cloud project ID
+region                 = "us-central1"            # Google Cloud region
+zone                   = "us-central1-a"          # Google Cloud zone
+resource_prefix        = "<stack_name>"           # Resource prefix for naming
+machine_type           = "custom-8-32768"         # Custom machine: 8 vCPU, 32GB RAM (use format: custom-<vCPU>-<memory_mb>)
 subnet_cidr            = "10.42.0.0/24"           # Subnet CIDR
 firewall_allowed_ports  = ["443", "30303", "9000"] # HTTPS, Geth P2P, Lighthouse P2P (SSH is handled separately)
 firewall_source_ranges  = ["0.0.0.0/0"]            # Public access for P2P and HTTPS (SSH uses dynamic IP restriction)

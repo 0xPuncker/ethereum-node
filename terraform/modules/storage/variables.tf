@@ -27,3 +27,9 @@ variable "bucket_roles" {
   description = "List of IAM roles granted to the service account on the bucket"
   type        = list(string)
 }
+
+variable "common_tags" {
+  description = "Common tags to apply to the storage bucket"
+  type        = map(string)
+  default     = {}
+}

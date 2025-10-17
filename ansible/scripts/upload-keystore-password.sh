@@ -22,7 +22,6 @@ if [ ! -f "$INVENTORY_FILE" ]; then
     exit 1
 fi
 
-# Extract password from inventory
 PASSWORD=$(grep 'deposit_cli_keystore_password:' "$INVENTORY_FILE" | awk '{print $2}' | tr -d '"')
 
 if [ -z "$PASSWORD" ]; then
@@ -42,7 +41,6 @@ if [ -z "$KEYSTORES" ]; then
     exit 1
 fi
 
-# Create password file for each keystore
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
@@ -53,11 +51,9 @@ for KEYSTORE_PATH in $KEYSTORES; do
 
     echo "Processing keystore: $KEYSTORE_NAME"
 
-    # Create password file
     echo -n "$PASSWORD" > "$PASSWORD_FILE"
     chmod 600 "$PASSWORD_FILE"
 
-    # Encrypt password file with KMS
     echo "  Encrypting password file..."
     gcloud kms encrypt \
         --project="$GCP_PROJECT" \
@@ -67,7 +63,6 @@ for KEYSTORE_PATH in $KEYSTORES; do
         --plaintext-file="$PASSWORD_FILE" \
         --ciphertext-file="$ENCRYPTED_FILE"
 
-    # Upload encrypted password to GCS
     echo "  Uploading to GCS..."
     gcloud storage cp "$ENCRYPTED_FILE" \
         "gs://$GCS_BUCKET/$GCS_PREFIX/${KEYSTORE_NAME}.txt.enc" \

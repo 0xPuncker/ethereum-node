@@ -22,3 +22,9 @@ variable "rotation_period" {
   description = "Rotation period for the crypto key"
   type        = string
 }
+
+variable "common_tags" {
+  description = "Common tags to apply to KMS resources"
+  type        = map(string)
+  default     = {}
+}

@@ -29,3 +29,9 @@ variable "backend_protocol" {
   default     = "HTTP"
   nullable    = false
 }
+
+variable "common_tags" {
+  description = "Common tags to apply to load balancer resources"
+  type        = map(string)
+  default     = {}
+}

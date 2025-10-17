@@ -22,7 +22,6 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-# Configuration (get from Terraform outputs)
 get_terraform_config() {
     cd "$(dirname "$0")/../terraform" || exit 1
 
@@ -48,7 +47,6 @@ echo "║     Encrypt Validator Keys with Cloud KMS                 ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
 
-# Check prerequisites
 log_info "Checking prerequisites..."
 
 if ! command -v gcloud &> /dev/null; then
@@ -66,7 +64,6 @@ fi
 log_success "Prerequisites check passed"
 echo ""
 
-# Get Terraform configuration
 log_info "Loading configuration from Terraform..."
 get_terraform_config
 
@@ -78,7 +75,6 @@ echo "  • KMS Location: $KMS_LOCATION"
 echo "  • GCS Bucket: gs://$GCS_BUCKET"
 echo ""
 
-# Prompt for keystore directory
 read -p "Enter path to validator keystores directory: " KEYSTORE_DIR
 
 if [ ! -d "$KEYSTORE_DIR" ]; then
@@ -99,7 +95,6 @@ fi
 log_success "Found $KEYSTORE_COUNT keystore file(s)"
 echo ""
 
-# Create temporary encryption directory
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
@@ -114,7 +109,6 @@ for KEYSTORE in $KEYSTORE_FILES; do
 
     log_info "Encrypting: $BASENAME"
 
-    # Encrypt with Cloud KMS
     gcloud kms encrypt \
         --project="$GCP_PROJECT" \
         --location="$KMS_LOCATION" \
@@ -136,7 +130,6 @@ echo ""
 log_success "Successfully encrypted $ENCRYPTED_COUNT keystore(s)"
 echo ""
 
-# Upload to GCS
 log_info "Uploading encrypted keystores to GCS..."
 echo ""
 
@@ -159,26 +152,6 @@ echo ""
 echo "╔════════════════════════════════════════════════════════════╗"
 echo "║              Encryption Complete!                          ║"
 echo "╚════════════════════════════════════════════════════════════╝"
-echo ""
-
-log_success "Your validator keys are now encrypted and stored securely!"
-echo ""
-log_info "📝 Next Steps:"
-echo "  1. Start validator service:"
-echo "     sudo ./scripts/start-validator.sh"
-echo ""
-echo "  2. Keys will be automatically:"
-echo "     • Downloaded from GCS on validator startup"
-echo "     • Decrypted using Cloud KMS"
-echo "     • Stored in memory-only tmpfs"
-echo "     • Wiped from memory on validator shutdown"
-echo ""
-
-log_info "🔒 Security Features:"
-echo "  • Keys encrypted at rest with Cloud KMS"
-echo "  • Decrypted keys never touch disk"
-echo "  • Automatic key rotation (30 days)"
-echo "  • Audit logging for all KMS operations"
 echo ""
 
 log_success "Done! ✨"

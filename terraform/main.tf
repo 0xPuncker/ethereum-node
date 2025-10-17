@@ -1,7 +1,15 @@
 locals {
-  region          = var.region
-  prefix          = var.resource_prefix
-  ssh_public_cidr = ["${trimspace(data.http.my_public_ip.response_body)}/32"]
+  region                = var.region
+  prefix                 = var.resource_prefix
+  ssh_public_cidr       = ["${trimspace(data.http.my_public_ip.response_body)}/32"]
+  sanitized_common_tags = { for k, v in var.common_tags : lower(k) => lower(v) }
+  common_tags = merge(
+    {
+      project    = lower(var.resource_prefix)
+      managed_by = "terraform"
+    },
+    local.sanitized_common_tags
+  )
 }
 
 data "http" "my_public_ip" {
@@ -15,7 +23,8 @@ module "kms" {
   region          = local.region
   crypto_key_name = local.prefix
   rotation_period = var.kms_rotation_period
-  key_ring_name   = "${local.prefix}-val-keyring"
+  key_ring_name   = "${local.prefix}-keyring"
+  common_tags     = merge(local.common_tags, { component = "kms" })
 }
 
 module "network" {
@@ -44,7 +53,8 @@ module "compute" {
   kms_key_self_link   = module.kms.crypto_key_self_link
   service_account_id  = "${local.prefix}-sa"
   ssh_user            = var.ansible_user
-  ssh_public_key_file = var.ssh_public_key_file
+  ssh_public_key_file  = var.ssh_public_key_file
+  common_tags         = merge(local.common_tags, { component = "compute" })
 }
 
 module "storage" {
@@ -55,11 +65,13 @@ module "storage" {
   service_account_email = module.compute.service_account_email
   location              = local.region
   kms_key_self_link     = module.kms.crypto_key_self_link
+  common_tags           = merge(local.common_tags, { component = "storage" })
 }
 
 module "loadbalancer" {
   source         = "./modules/loadbalancer"
   project_id     = var.project_id
-  name_prefix    = "${local.prefix}-lb"
+  name_prefix     = "${local.prefix}-lb"
   instance_group = module.compute.instance_group_id
+  common_tags    = merge(local.common_tags, { component = "loadbalancer" })
 }

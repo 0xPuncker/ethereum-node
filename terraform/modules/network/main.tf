@@ -1,5 +1,6 @@
 locals {
-  network_tag = "${var.network_name}-vm"
+  network_tag = "${var.network_name}-network"
+
 }
 
 resource "google_compute_network" "this" {

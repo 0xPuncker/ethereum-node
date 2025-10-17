@@ -77,3 +77,9 @@ variable "backend_port" {
   default     = 3000
   nullable    = false
 }
+
+variable "common_tags" {
+  description = "Common tags to apply to compute resources"
+  type        = map(string)
+  default     = {}
+}

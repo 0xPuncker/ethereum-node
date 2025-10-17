@@ -3,6 +3,9 @@ resource "google_compute_address" "static" {
   address_type = "EXTERNAL"
   region       = var.region
   project      = var.project_id
+  labels = merge(var.common_tags, {
+    name = "${var.instance_name}-ip"
+  })
 }
 
 resource "google_service_account" "this" {
@@ -23,6 +26,9 @@ resource "google_compute_disk" "data" {
   size    = var.data_disk.size
   zone    = var.zone
   project = var.project_id
+  labels = merge(var.common_tags, {
+    name = "${var.instance_name}-data"
+  })
 
   disk_encryption_key {
     kms_key_self_link = var.kms_key_self_link
@@ -38,6 +44,9 @@ resource "google_compute_instance" "vm" {
   project                   = var.project_id
   tags                      = var.network_tags
   allow_stopping_for_update = true
+  labels = merge(var.common_tags, {
+    name = var.instance_name
+  })
 
   boot_disk {
     initialize_params {

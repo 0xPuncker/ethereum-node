@@ -53,4 +53,7 @@ resource "google_compute_global_forwarding_rule" "this" {
 resource "google_compute_global_address" "this" {
   name    = "${var.name_prefix}-ip"
   project = var.project_id
+  labels = merge(var.common_tags, {
+    name = "${var.name_prefix}-ip"
+  })
 }

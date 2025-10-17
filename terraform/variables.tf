@@ -20,8 +20,6 @@ variable "zone" {
 variable "resource_prefix" {
   description = "Prefix used when naming resources"
   type        = string
-  default     = "eth-node"
-  nullable    = false
 }
 
 variable "machine_type" {
@@ -36,11 +34,6 @@ variable "boot_disk" {
     type  = string
     size  = number
   })
-  default = {
-    image = "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts"
-    type  = "pd-balanced"
-    size  = 50
-  }
 }
 
 variable "data_disk" {
@@ -49,10 +42,6 @@ variable "data_disk" {
     type = string
     size = number
   })
-  default = {
-    type = "pd-balanced"
-    size = 200
-  }
 }
 
 variable "subnet_cidr" {
@@ -100,4 +89,13 @@ variable "ssh_public_key_file" {
   description = "Path to SSH public key file"
   type        = string
   default     = "~/.ssh/id_ed25519.pub"
+}
+
+variable "common_tags" {
+  description = "Common tags applied to managed resources"
+  type        = map(string)
+  default = {
+    provider    = "opentofu"
+    environment = "development"
+  }
 }
