@@ -1,0 +1,95 @@
+---
+# Main playbook for deploying Ethereum validator
+# Usage:
+#   ansible-playbook playbooks/deploy_validator.yml
+
+- name: Deploy Ethereum Validator (Nethermind + Nimbus)
+  hosts: eth-validator
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - ../vars/common.yml
+    - "../vars/{{ testnet_network | default('hoodi') }}.yml"
+
+  pre_tasks:
+    - name: Display deployment information
+      debug:
+        msg:
+          - "=== Ethereum Validator Deployment ==="
+          - "Host       : {{ inventory_hostname }}"
+          - "Network    : {{ testnet_network }}"
+          - "Disk       : {{ disk_device }} → {{ mount_point }}"
+          - "Fee Recipient: {{ fee_recipient_address }}"
+          - ""
+          - "Deployment phases:"
+          - "  - Prepare disks, users, and security baseline"
+          - "  - Install Nethermind execution client"
+          - "  - Install Nimbus consensus and validator clients"
+          - "  - Orchestrate and start all services"
+      tags: always
+
+    - name: Verify system requirements
+      assert:
+        that:
+          - ansible_processor_vcpus >= min_cpu_cores
+          - (ansible_memtotal_mb / 1024) >= min_memory_gb
+        fail_msg: "System does not meet minimum requirements ({{ min_cpu_cores }} CPU cores, {{ min_memory_gb }}GB RAM)"
+        success_msg: "System meets minimum requirements"
+      tags: always
+
+  roles:
+    # Phase 1: Infrastructure Preparation
+    - role: disk_setup
+      tags: [setup, disk, infrastructure]
+
+    - role: system_users
+      tags: [setup, users, infrastructure]
+
+    - role: security_hardening
+      tags: [setup, security, infrastructure]
+
+    - role: jwt_secret
+      tags: [setup, jwt, infrastructure]
+
+    - role: kms_secrets
+      tags: [setup, kms, security, infrastructure]
+
+    # Phase 2: Execution Layer (Nethermind)
+    - role: nethermind
+      tags: [nethermind, execution, clients]
+
+    # Phase 3: Consensus Layer (Nimbus)
+    - role: nimbus
+      tags: [nimbus, consensus, validator, clients]
+
+    # Phase 5: Service Orchestration
+    - role: validator_orchestration
+      tags: [services, orchestration, startup]
+
+  post_tasks:
+    - name: Display deployment summary
+      debug:
+        msg:
+          - "=== Deployment Summary ==="
+          - "Infrastructure:"
+          - "  - Disk {{ disk_device }} mounted at {{ mount_point }}"
+          - "  - Users created: execution, consensus, validator"
+          - "  - Security baseline applied (SSH + firewall)"
+          - ""
+          - "Clients:"
+          - "  - Nethermind (execution) → {{ nethermind_install_dir }}"
+          - "  - Nimbus (consensus/validator) → {{ nimbus_beacon_bin }}"
+          - ""
+          - "Services:"
+          - "  - execution.service (Nethermind)"
+          - "  - consensus.service (Nimbus beacon)"
+          - "  - validator.service (Nimbus validator)"
+          - ""
+          - "Next steps:"
+          - "  - Monitor sync: sudo journalctl -fu execution | ccze"
+          - "                 sudo journalctl -fu consensus | ccze"
+          - "  - {{ 'Validator running—monitor attestations: sudo journalctl -fu validator | ccze' if validator_keys_available | default(false) | bool else 'Import validator keys via deposit-cli and start validator service' }}"
+          - "  - Health check: ansible-playbook playbooks/validate.yml"
+          - "  - Fund validator: obtain testnet ETH and submit deposit"
+      tags: always

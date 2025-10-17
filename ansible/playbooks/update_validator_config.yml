@@ -1,0 +1,67 @@
+---
+# Update validator service configuration
+# Usage: ansible-playbook playbooks/update_validator_config.yml
+
+- name: Update Validator Service Configuration
+  hosts: eth-validator
+  become: true
+
+  vars_files:
+    - ../vars/common.yml
+    - "../vars/{{ testnet_network | default('hoodi') }}.yml"
+    - ../roles/nimbus/defaults/main.yml
+
+  tasks:
+    - name: Display update information
+      debug:
+        msg:
+          - "=== Validator Configuration Update ==="
+          - "Host     : {{ inventory_hostname }}"
+          - "Graffiti : {{ validator_graffiti }}"
+          - ""
+          - "Update steps:"
+          - "  - Refresh validator service unit"
+          - "  - Reload systemd daemon"
+          - "  - Restart validator service"
+
+    - name: Update validator service file
+      template:
+        src: ../roles/nimbus/templates/validator.service.j2
+        dest: /etc/systemd/system/validator.service
+        owner: root
+        group: root
+        mode: "0644"
+      register: service_updated
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+      when: service_updated.changed
+
+    - name: Restart validator service
+      systemd:
+        name: validator
+        state: restarted
+      when: service_updated.changed
+      ignore_errors: true
+
+    - name: Wait for validator to restart
+      pause:
+        seconds: 10
+      when: service_updated.changed
+
+    - name: Check validator service status
+      systemd:
+        name: validator
+      register: validator_status
+
+    - name: Display service status
+      debug:
+        msg:
+          - "=== Update Summary ==="
+          - "Validator service: {{ validator_status.status.ActiveState }}"
+          - "Graffiti        : {{ validator_graffiti }}"
+          - ""
+          - "Log checks:"
+          - "  - task logs:validator-tail"
+          - "  - ssh {{ inventory_hostname }} 'sudo journalctl -u validator -n 50 | grep -i graffiti'"

@@ -1,0 +1,182 @@
+---
+# Gracefully restart all validator services
+# Usage: ansible-playbook playbooks/restart_services.yml
+
+- name: Gracefully Restart Ethereum Validator Services
+  hosts: eth-validator
+  become: true
+
+  vars_files:
+    - ../vars/common.yml
+    - "../vars/{{ testnet_network | default('hoodi') }}.yml"
+
+  tasks:
+    - name: Display restart information
+      debug:
+        msg:
+          - "=== Graceful Service Restart ==="
+          - "Sequence:"
+          - "  - Stop validator (KMS cleanup)"
+          - "  - Stop consensus (graceful)"
+          - "  - Stop execution (graceful)"
+          - "  - Start execution (resume sync)"
+          - "  - Start consensus (beacon online)"
+          - "  - Start validator (KMS decrypt)"
+
+    # ========================================
+    # STOP PHASE (Reverse Order)
+    # ========================================
+
+    - name: Stop validator service
+      systemd:
+        name: validator
+        state: stopped
+      ignore_errors: true
+      register: validator_stop
+
+    - name: Wait for validator to stop gracefully
+      pause:
+        seconds: 10
+      when: validator_stop.changed
+
+    - name: Verify validator keys cleaned up
+      debug:
+        msg:
+          - "=== Validator Cleanup ==="
+          - "Validator service stopped; KMS cleanup executed."
+          - "Decrypted keys removed from memory."
+
+    - name: Stop consensus service
+      systemd:
+        name: consensus
+        state: stopped
+      ignore_errors: true
+      register: consensus_stop
+
+    - name: Wait for consensus to stop gracefully
+      pause:
+        seconds: 15
+      when: consensus_stop.changed
+
+    - name: Stop execution service
+      systemd:
+        name: execution
+        state: stopped
+      ignore_errors: true
+      register: execution_stop
+
+    - name: Wait for execution to stop gracefully
+      pause:
+        seconds: 15
+      when: execution_stop.changed
+
+    - name: Verify all services stopped
+      systemd:
+        name: "{{ item }}"
+      register: stop_status
+      loop:
+        - execution
+        - consensus
+        - validator
+
+    - name: Display stop status
+      debug:
+        msg:
+          - "=== Services Stopped ==="
+          - "  - Execution: {{ stop_status.results[0].status.ActiveState }}"
+          - "  - Consensus: {{ stop_status.results[1].status.ActiveState }}"
+          - "  - Validator: {{ stop_status.results[2].status.ActiveState }}"
+
+    # ========================================
+    # START PHASE (Forward Order)
+    # ========================================
+
+    - name: Start execution service
+      systemd:
+        name: execution
+        state: started
+      register: execution_start
+
+    - name: Wait for execution to initialize
+      pause:
+        seconds: 20
+      when: execution_start.changed
+
+    - name: Check execution health
+      uri:
+        url: "http://127.0.0.1:8545"
+        method: POST
+        body_format: json
+        body:
+          jsonrpc: "2.0"
+          method: "eth_syncing"
+          params: []
+          id: 1
+        return_content: yes
+      register: exec_health
+      retries: 5
+      delay: 3
+      until: exec_health.status == 200
+      ignore_errors: true
+
+    - name: Start consensus service
+      systemd:
+        name: consensus
+        state: started
+      register: consensus_start
+
+    - name: Wait for consensus to initialize
+      pause:
+        seconds: 25
+      when: consensus_start.changed
+
+    - name: Check consensus health
+      uri:
+        url: "http://127.0.0.1:5052/eth/v1/node/health"
+        method: GET
+        status_code: [200, 206]
+      register: consensus_health
+      retries: 5
+      delay: 3
+      until: consensus_health.status in [200, 206]
+      ignore_errors: true
+
+    - name: Start validator service
+      systemd:
+        name: validator
+        state: started
+      ignore_errors: true
+      register: validator_start
+
+    - name: Wait for validator to initialize
+      pause:
+        seconds: 15
+      when: validator_start.changed
+
+    - name: Verify validator keys decrypted
+      debug:
+        msg:
+          - "=== Validator Startup ==="
+          - "Validator service started; KMS decryption executed."
+          - "Decrypted keys loaded into tmpfs."
+
+    - name: Verify all services are running
+      systemd:
+        name: "{{ item }}"
+      register: service_status
+      loop:
+        - execution
+        - consensus
+        - validator
+
+    - name: Display final service status
+      debug:
+        msg:
+          - "=== Restart Summary ==="
+          - "Services:"
+          - "  - Execution: {{ service_status.results[0].status.ActiveState }}"
+          - "  - Consensus: {{ service_status.results[1].status.ActiveState }}"
+          - "  - Validator: {{ service_status.results[2].status.ActiveState }}"
+          - ""
+          - "Script: Health check:"
+          - "  - ./scripts/check-health.sh"

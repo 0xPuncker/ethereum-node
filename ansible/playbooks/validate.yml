@@ -1,0 +1,141 @@
+---
+# Validation playbook - Check validator deployment health
+# Usage: ansible-playbook playbooks/validate.yml
+
+- name: Validate Ethereum Validator Deployment
+  hosts: eth-validator
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - ../vars/common.yml
+    - "../vars/{{ testnet_network | default('hoodi') }}.yml"
+
+  vars:
+    # Port definitions (defaults from roles)
+    nethermind_rpc_port: 8545
+    nimbus_rest_port: 5052
+    mount_point: "/validator"
+
+  tasks:
+    - name: Check all services are running
+      systemd:
+        name: "{{ item }}"
+      register: service_status
+      loop:
+        - execution
+        - consensus
+        - validator
+      failed_when: false
+
+    - name: Display service status
+      debug:
+        msg:
+          - "=== Service Status ==="
+          - "  - Execution: {{ service_status.results[0].status.ActiveState }}"
+          - "  - Consensus: {{ service_status.results[1].status.ActiveState }}"
+          - "  - Validator: {{ service_status.results[2].status.ActiveState }}"
+
+    - name: Check execution client peer count
+      uri:
+        url: "http://127.0.0.1:{{ nethermind_rpc_port }}"
+        method: POST
+        body_format: json
+        body:
+          jsonrpc: "2.0"
+          method: "net_peerCount"
+          params: []
+          id: 1
+        status_code: 200
+      register: execution_peers
+      failed_when: false
+
+    - name: Check execution client sync status
+      uri:
+        url: "http://127.0.0.1:{{ nethermind_rpc_port }}"
+        method: POST
+        body_format: json
+        body:
+          jsonrpc: "2.0"
+          method: "eth_syncing"
+          params: []
+          id: 1
+        status_code: 200
+      register: execution_sync
+      failed_when: false
+
+    - name: Check consensus client sync status
+      uri:
+        url: "http://127.0.0.1:{{ nimbus_rest_port }}/eth/v1/node/syncing"
+        method: GET
+        status_code: 200
+      register: consensus_sync
+      failed_when: false
+
+    - name: Check consensus client peer count
+      uri:
+        url: "http://127.0.0.1:{{ nimbus_rest_port }}/eth/v1/node/peer_count"
+        method: GET
+        status_code: 200
+      register: consensus_peers
+      failed_when: false
+
+    - name: Check disk usage
+      shell: df -h {{ mount_point }}
+      register: disk_usage
+      changed_when: false
+
+    - name: Check recent execution logs for errors
+      shell: journalctl -u execution --since "10 minutes ago" | grep -i error | tail -5
+      register: execution_errors
+      changed_when: false
+      failed_when: false
+
+    - name: Check recent consensus logs for errors
+      shell: journalctl -u consensus --since "10 minutes ago" | grep -i error | tail -5
+      register: consensus_errors
+      changed_when: false
+      failed_when: false
+
+    - name: Check validator logs for attestations (if running)
+      shell: journalctl -u validator --since "10 minutes ago" | grep -i "attestation" | tail -5
+      register: validator_attestations
+      changed_when: false
+      failed_when: false
+      when: service_status.results[2].status.ActiveState == "active"
+
+    - name: Display validation results
+      debug:
+        msg:
+          - "=== Validator Health Summary ==="
+          - "Services:"
+          - "  - Execution: {{ service_status.results[0].status.ActiveState }} (PID: {{ service_status.results[0].status.MainPID | default('N/A') }})"
+          - "  - Consensus: {{ service_status.results[1].status.ActiveState }} (PID: {{ service_status.results[1].status.MainPID | default('N/A') }})"
+          - "  - Validator: {{ service_status.results[2].status.ActiveState }} (PID: {{ service_status.results[2].status.MainPID | default('N/A') }})"
+          - ""
+          - "Network:"
+          - "  - Execution peers: {{ execution_peers.json.result | default('N/A') if (execution_peers.status | default(0)) == 200 else 'Unable to query (service down)' }}"
+          - "  - Execution syncing: {{ 'Yes' if (execution_sync.json.result | default(false)) != false else 'No (synced)' if (execution_sync.status | default(0)) == 200 else 'Unable to query (service down)' }}"
+          - "  - Consensus peers: {{ consensus_peers.json.data.connected | default('N/A') if (consensus_peers.status | default(0)) == 200 else 'Unable to query (service down)' }}"
+          - "  - Consensus syncing: {{ consensus_sync.json.data.is_syncing | default('N/A') if (consensus_sync.status | default(0)) == 200 else 'Unable to query (service down)' }}"
+          - ""
+          - "Disk:"
+          - "{{ disk_usage.stdout_lines | map('regex_replace', '^', '  - ') | join('\n') }}"
+          - ""
+          - "Recent errors:"
+          - "  - Execution: {{ execution_errors.stdout_lines | default([]) | length }} in last 10 minutes"
+          - "  - Consensus: {{ consensus_errors.stdout_lines | default([]) | length }} in last 10 minutes"
+          - ""
+          - "{{ 'Validator activity:' if service_status.results[2].status.ActiveState == 'active' else 'Validator status: Not running (keys not imported or service down)' }}"
+          - "{{ '  - Recent attestations: ' + (validator_attestations.stdout_lines | default([]) | length | string) if service_status.results[2].status.ActiveState == 'active' else '' }}"
+          - ""
+          - "Health:"
+          - "  - {{ 'Overall status: HEALTHY' if service_status.results[0].status.ActiveState == 'active' and service_status.results[1].status.ActiveState == 'active' else 'Overall status: ISSUES DETECTED (services down)' }}"
+
+    - name: Fail if critical services are down
+      fail:
+        msg: "Critical services are not running. Check logs with: sudo journalctl -fu {{ item.item }}"
+      when: item.status.ActiveState != "active"
+      loop: "{{ service_status.results[:2] }}"
+      loop_control:
+        label: "{{ item.item }}"
