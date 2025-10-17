@@ -1,59 +1,52 @@
 # Ethereum Testnet Validator
 
-<div align="center">
 <p align="center">
-  <img src="https://beincrypto.com/wp-content/uploads/2024/09/bic_EthereumPoW_ETHW_3-covers_neutral.jpg" alt="Ethereum Hoodi Testnet" width="350"/>
+  <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png?v=032" alt="Ethereum Hoodi Testnet" width="200"/>
 </p>
 
-<div align="center">
-  This repository is a one-click deployment solution for running a Ethereum node (testnet) on VM (GCP).
+<p align="center">
+  This repository is a one-click deployment solution for running an Ethereum node (testnet) on a VM (GCP).
+  <br />
+  <strong>Current Implementation:</strong> Ansible-based deployment with Nethermind (execution) + Nimbus (consensus)
+</p>
 
-  > **Current Implementation:** Ansible-based deployment with Nethermind (execution) + Nimbus (consensus)
-</div>
-
-<br />
-<div align="center">
-  <!-- Docker -->
-  <a href="https://www.docker.com/">
-    <img src="https://img.shields.io/badge/Docker-v28+-blue" alt="Docker" />
-  </a>
-   <!-- Ansible -->
+<p align="center">
+    <a href="https://www.docker.com/">
+      <img src="https://img.shields.io/badge/Docker-v28+-blue" alt="Docker" />
+    </a>
     <a href="https://www.ansible.com/">
       <img src="https://img.shields.io/badge/Ansible-v2.9+-blue" alt="Ansible" />
     </a>
-    <!-- MIT License -->
     <a href="https://opensource.org/licenses/MIT">
       <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License" />
     </a>
+</p>
 
-</div>
-<br />
+## Table of Contents
 
-## 📑 Table of Contents
-
-- [Current Architecture](#️-current-architecture)
-- [Prerequisites](#-prerequisites)
-- [Quick Start](#-quick-start)
-  - [Command 1: Provision Infrastructure](#command-1-provision-infrastructure-️)
-  - [Command 2: Start Validator](#command-2-start-validator-)
-  - [Command 3: Check Health](#command-3-check-health-)
-- [Monitoring and Management](#-monitoring-and-management)
+- [Current Architecture](#current-architecture)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+  - [Command 1: Provision Infrastructure](#command-1-provision-infrastructure)
+  - [Command 2: Start Validator](#command-2-start-validator)
+  - [Command 3: Check Health](#command-3-check-health)
+- [Monitoring and Management](#monitoring-and-management)
   - [Service Logs](#service-logs)
   - [Sync Status Queries](#sync-status-queries)
   - [Metrics Endpoints](#metrics-endpoints)
-- [Configuration](#-configuration)
+- [Configuration](#configuration)
   - [Inventory Configuration](#inventory-configuration)
   - [Testnet Selection](#testnet-selection)
-- [Project Structure](#-project-structure)
-- [Documentation](#-documentation)
-- [Security & Key Management](#-security--key-management)
+- [Project Structure](#project-structure)
+- [Documentation](#documentation)
+- [Security & Key Management](#security--key-management)
   - [KMS-Encrypted Validator Keys](#kms-encrypted-validator-keys-bonus-feature)
   - [General Security](#general-security)
-- [License](#-license)
-- [Acknowledgments](#-acknowledgments)
-- [Support](#-support)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
+- [Support](#support)
 
-## 🏗️ Current Architecture
+## Current Architecture
 
 **Deployment:** GCP Compute Engine VM with Ansible automation
 
@@ -96,7 +89,7 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 📋 Prerequisites
+## Prerequisites
 
 ### Target System Requirements
 
@@ -112,11 +105,11 @@
 - **SSH**: Key-based authentication to target VM
 - **Git**: For cloning repository
 
-## 🚀 Quick Start
+## Quick Start
 
 **These are the ONLY 3 commands needed from a clean environment:**
 
-### Command 1: Provision Infrastructure ⚙️
+### Command 1: Provision Infrastructure
 
 ```bash
 sudo ./scripts/provision.sh
@@ -140,7 +133,7 @@ sudo ./scripts/provision.sh
 
 ---
 
-### Command 2: Start Validator 🚀
+### Command 2: Start Validator
 
 ```bash
 sudo ./scripts/start-validator.sh
@@ -161,7 +154,7 @@ sudo ./scripts/start-validator.sh
 
 ---
 
-### Command 3: Check Health ✅
+### Command 3: Check Health
 
 ```bash
 ./scripts/check-health.sh
@@ -187,7 +180,7 @@ sudo ./scripts/start-validator.sh
 **Duration:** ~5-10 seconds
 **Output:** Human-readable health status
 
-## 📊 Monitoring and Management
+## Monitoring and Management
 
 ### Service Logs
 
@@ -223,7 +216,7 @@ curl http://<vm-ip>:5052/eth/v1/node/peer_count | jq
 - **Nimbus Beacon**: `http://<vm-ip>:8008/metrics` (Prometheus format)
 - **Nimbus Validator**: `http://<vm-ip>:8009/metrics` (Prometheus format)
 
-## 🔧 Configuration
+## Configuration
 
 ### Inventory Configuration
 
@@ -262,7 +255,7 @@ all:
 
 Change in `ansible/vars/common.yml` or inventory
 
-## 📝 Project Structure
+## Project Structure
 
 ```ethereum-node/
 ├── scripts/
@@ -302,7 +295,7 @@ Change in `ansible/vars/common.yml` or inventory
     └── ARCHITECTURE.md        # Design details
 ```
 
-## 📖 Documentation
+## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) - System architecture and design decisions
 - [KMS Key Management](docs/KMS_KEY_MANAGEMENT.md) - KMS keys and management
@@ -310,7 +303,7 @@ Change in `ansible/vars/common.yml` or inventory
 - [Hoodi Validator Registration](docs/HOODI_VALIDATOR_REGISTRATION.md) - Detailed Hoodi validator registration
 - [Runbook](docs/RUNBOOK.md) - Runbook
 
-## 🔐 Security & Key Management
+## Security & Key Management
 
 ### KMS-Encrypted Validator Keys (Bonus Feature)
 
@@ -327,12 +320,12 @@ Key Lifecycle:
 
 **Security Features:**
 
-- 🔒 **AES-256 Encryption** - Industry-standard Cloud KMS encryption
-- 🔄 **Automatic Key Rotation** - 30-day rotation policy
-- 💾 **Memory-Only Storage** - Decrypted keys never touch disk (tmpfs)
-- 🧹 **Secure Deletion** - Keys wiped with shred on service stop
-- 📋 **Audit Logging** - All KMS operations logged to Cloud Logging
-- 🔑 **IAM Access Control** - Minimal permissions (decrypt only)
+- **AES-256 Encryption** - Industry-standard Cloud KMS encryption
+- **Automatic Key Rotation** - 30-day rotation policy
+- **Memory-Only Storage** - Decrypted keys never touch disk (tmpfs)
+- **Secure Deletion** - Keys wiped with shred on service stop
+- **Audit Logging** - All KMS operations logged to Cloud Logging
+- **IAM Access Control** - Minimal permissions (decrypt only)
 
 **Quick Start:**
 
@@ -351,11 +344,11 @@ ssh <vm-ip> 'sudo journalctl -t validator-keys -f'
 
 - [KMS Key Management Guide](docs/KMS_KEY_MANAGEMENT.md)
 
-## 📄 License
+## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [Ethereum Foundation](https://ethereum.org/)
 - [Hoodi Ethereum Explorer](https://hoodi.beaconcha.in/)
@@ -364,6 +357,6 @@ ssh <vm-ip> 'sudo journalctl -t validator-keys -f'
 - [Hoodi Faucet](https://hoodi-faucet.pk910.de/)
 - [Validator's List](https://hoodi.beaconcha.in/validators#all)
 
-## 💬 Support
+## Support
 
 For support, please open an issue on the GitHub repository.
