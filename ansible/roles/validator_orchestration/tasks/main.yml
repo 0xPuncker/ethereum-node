@@ -1,0 +1,33 @@
+---
+# Main tasks for validator_orchestration role
+
+- name: Include execution layer startup
+  include_tasks: start_execution.yml
+
+- name: Include checkpoint sync
+  include_tasks: checkpoint_sync.yml
+  when: enable_checkpoint_sync | bool
+
+- name: Include consensus layer startup
+  include_tasks: start_consensus.yml
+
+- name: Include validator startup
+  include_tasks: start_validator.yml
+  when: validator_keys_available | default(false) | bool
+
+- name: Include health checks
+  include_tasks: health_check.yml
+
+- name: Display orchestration summary
+  debug:
+    msg:
+      - "=== Validator Orchestration Complete ==="
+      - "Execution layer: Running"
+      - "Consensus layer: {{ 'Running' if not (enable_checkpoint_sync | bool) else 'Synced and Running' }}"
+      - "Validator: {{ 'Running' if validator_keys_available | default(false) | bool else 'Not started (keys not imported)' }}"
+      - ""
+      - "Next steps:"
+      - "  1. Monitor execution sync: sudo journalctl -fu execution"
+      - "  2. Monitor consensus sync: sudo journalctl -fu consensus"
+      - "  {{ '3. Monitor validator: sudo journalctl -fu validator' if validator_keys_available | default(false) | bool else '3. Import validator keys and start validator service' }}"
+      - "  4. Check peer connections and sync status"

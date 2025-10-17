@@ -1,0 +1,47 @@
+---
+# Start validator client (Nimbus validator)
+
+- name: Wait for consensus REST API to be responsive
+  uri:
+    url: "http://127.0.0.1:{{ nimbus_rest_port }}/eth/v1/node/health"
+    method: GET
+    status_code: 200,206
+  register: consensus_api_ready
+  retries: 30
+  delay: 10
+  until: consensus_api_ready.status in [200, 206]
+
+- name: Start Nimbus validator client
+  systemd:
+    name: validator
+    state: started
+  register: validator_start
+
+- name: Wait for validator client to initialize
+  pause:
+    seconds: 10
+
+- name: Check validator client is running
+  systemd:
+    name: validator
+  register: validator_status
+  failed_when: validator_status.status.ActiveState != "active"
+
+- name: Display validator client logs (last 20 lines)
+  shell: journalctl -u validator -n 20 --no-pager
+  register: validator_logs
+  changed_when: false
+
+- name: Show validator startup status
+  debug:
+    msg:
+      - "=== Validator Client Started ==="
+      - "Service: validator.service"
+      - "Status: {{ validator_status.status.ActiveState }}"
+      - "PID: {{ validator_status.status.MainPID | default('N/A') }}"
+      - ""
+      - "Recent logs:"
+      - "{{ validator_logs.stdout_lines[-10:] | join('\n') }}"
+      - ""
+      - "Note: Validator will start attesting once consensus is synced. Monitor with:"
+      - "  sudo journalctl -fu validator | ccze"

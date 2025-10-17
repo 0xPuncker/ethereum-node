@@ -1,0 +1,16 @@
+---
+# Handlers for security_hardening role
+
+# SSH restart handler removed to prevent connection loss during playbook execution
+# SSH configuration changes are validated but service is NOT restarted automatically
+# Manual restart required: sudo systemctl restart ssh
+
+- name: restart fail2ban
+  systemd:
+    name: fail2ban
+    state: restarted
+
+- name: restart chrony
+  systemd:
+    name: chrony
+    state: restarted

@@ -1,0 +1,9 @@
+---
+# Main tasks for generate_validator_keys role
+
+- name: Ensure deposit CLI is installed
+  include_tasks: install.yml
+
+- name: Generate validator mnemonic and keystores
+  include_tasks: generate.yml
+  when: deposit_cli_generate_mnemonic | bool

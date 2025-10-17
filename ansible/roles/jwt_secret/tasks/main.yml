@@ -1,0 +1,60 @@
+---
+# Generate JWT secret for Engine API authentication
+
+- name: Ensure secrets directory exists
+  file:
+    path: "{{ secrets_dir }}"
+    state: directory
+    owner: root
+    group: ethereum
+    mode: '0750'
+
+- name: Check if JWT secret already exists
+  stat:
+    path: "{{ jwt_secret_path }}"
+  register: jwt_secret_stat
+
+- name: Generate JWT secret
+  shell: openssl rand -hex 32 | tr -d "\n"
+  register: jwt_secret_generated
+  when: not jwt_secret_stat.stat.exists
+  changed_when: true
+
+- name: Write JWT secret to file
+  copy:
+    content: "{{ jwt_secret_generated.stdout }}"
+    dest: "{{ jwt_secret_path }}"
+    owner: root
+    group: ethereum
+    mode: "{{ jwt_secret_perms }}"
+  when: not jwt_secret_stat.stat.exists
+
+- name: Ensure JWT secret has correct ownership and permissions
+  file:
+    path: "{{ jwt_secret_path }}"
+    owner: root
+    group: ethereum
+    mode: "{{ jwt_secret_perms }}"
+  when: jwt_secret_stat.stat.exists
+
+- name: Verify JWT secret file
+  stat:
+    path: "{{ jwt_secret_path }}"
+  register: jwt_verify
+
+- name: Read JWT secret for verification
+  slurp:
+    src: "{{ jwt_secret_path }}"
+  register: jwt_content
+  when: jwt_verify.stat.exists
+
+- name: Display JWT secret status
+  debug:
+    msg:
+      - "=== JWT Secret Configuration ==="
+      - "Path: {{ jwt_secret_path }}"
+      - "Permissions: {{ jwt_verify.stat.mode }}"
+      - "Size: {{ jwt_verify.stat.size }} bytes"
+      - "Created: {{ 'Yes' if not jwt_secret_stat.stat.exists else 'Already exists' }}"
+      - "Secret (first 16 chars): {{ (jwt_content['content'] | b64decode)[:16] }}..."
+  when: jwt_verify.stat.exists

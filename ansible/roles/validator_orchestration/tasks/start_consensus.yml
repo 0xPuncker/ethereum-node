@@ -1,0 +1,65 @@
+---
+# Start consensus layer (Nimbus beacon)
+
+- name: Wait for execution client to be responsive
+  uri:
+    url: "http://127.0.0.1:{{ nethermind_rpc_port }}"
+    method: POST
+    body_format: json
+    body:
+      jsonrpc: "2.0"
+      method: "eth_syncing"
+      params: []
+      id: 1
+    status_code: 200
+  register: execution_ready
+  retries: 12
+  delay: 10
+  until: execution_ready.status == 200
+
+- name: Start Nimbus beacon node
+  systemd:
+    name: consensus
+    state: started
+  register: consensus_start
+
+- name: Wait for consensus client to initialize
+  pause:
+    seconds: 15
+
+- name: Gather consensus service facts
+  service_facts:
+
+- name: Check consensus client is running
+  assert:
+    that:
+      - ansible_facts.services['consensus.service'].state == 'running'
+    fail_msg: "Consensus service is not running"
+    success_msg: "Consensus service is active and running"
+
+- name: Get consensus service details
+  systemd:
+    name: consensus
+    state: started
+  register: consensus_status
+  check_mode: yes
+  changed_when: false
+
+- name: Display consensus client logs (last 20 lines)
+  shell: journalctl -u consensus -n 20 --no-pager
+  register: consensus_logs
+  changed_when: false
+
+- name: Show consensus startup status
+  debug:
+    msg:
+      - "=== Consensus Layer Started ==="
+      - "Service: consensus.service"
+      - "Status: {{ ansible_facts.services['consensus.service'].state }}"
+      - "State: {{ ansible_facts.services['consensus.service'].status }}"
+      - ""
+      - "Recent logs:"
+      - "{{ consensus_logs.stdout_lines[-10:] | join('\n') }}"
+      - ""
+      - "Note: Consensus client will sync from checkpoint. Monitor with:"
+      - "  sudo journalctl -fu consensus | ccze"

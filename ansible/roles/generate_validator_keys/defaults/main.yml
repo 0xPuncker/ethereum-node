@@ -1,0 +1,27 @@
+---
+# Default variables for generate_validator_keys role (EthStaker fork)
+
+deposit_cli_version: "v1.2.2"
+deposit_cli_archive_name: "ethstaker_deposit-cli-b13dcb9-linux-amd64.tar.gz"
+deposit_cli_download_url: "https://github.com/eth-educators/ethstaker-deposit-cli/releases/download/{{ deposit_cli_version }}/{{ deposit_cli_archive_name }}"
+deposit_cli_checksum: "sha256:04af3f4fd2fdccf4ae060abde47637622a31114d9f2e53e62722a694a4d5b206"
+deposit_cli_install_dir: "/usr/local/bin/ethstaker-deposit-cli"
+deposit_cli_binary_path: "{{ deposit_cli_install_dir }}/deposit"
+deposit_cli_version_file: "{{ deposit_cli_install_dir }}/.version"
+deposit_cli_owner: "root"
+deposit_cli_group: "root"
+deposit_cli_mode: "0755"
+deposit_cli_expect_script: "/usr/local/bin/ethstaker-deposit-cli.expect"
+
+# Mnemonic generation settings
+deposit_cli_generate_mnemonic: true
+deposit_cli_validators: 1
+deposit_cli_chain: "{{ testnet_network | default('hoodi') }}"
+deposit_cli_language: "English"
+deposit_cli_workspace_dir: "/var/lib/staking-deposit"
+deposit_cli_workspace_mode: "0700"
+deposit_cli_keystore_password: ""
+deposit_cli_force_regenerate: false
+deposit_cli_mnemonic_path: "{{ deposit_cli_workspace_dir }}/mnemonic.txt"
+deposit_cli_mnemonic: "" # Existing mnemonic (24 words) - if provided, will use existing-mnemonic instead of new-mnemonic
+deposit_cli_validator_start_index: 0 # Starting index for validator key generation

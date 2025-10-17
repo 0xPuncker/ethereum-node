@@ -1,0 +1,31 @@
+---
+# Perform checkpoint sync for Nimbus beacon node
+
+- name: Check if checkpoint sync already completed
+  stat:
+    path: "{{ nimbus_data_dir }}/db"
+  register: nimbus_db
+
+- name: Run Nimbus checkpoint sync
+  command: >
+    {{ nimbus_beacon_bin }} trustedNodeSync
+    --network={{ testnet_network }}
+    --data-dir={{ nimbus_data_dir }}
+    --trusted-node-url={{ checkpoint_sync_url }}
+    --backfill={{ checkpoint_sync_backfill | lower }}
+  become: true
+  become_user: "{{ nimbus_user }}"
+  when: not nimbus_db.stat.exists
+  register: checkpoint_result
+  async: 1800
+  poll: 30
+
+- name: Display checkpoint sync status
+  debug:
+    msg:
+      - "=== Checkpoint Sync Status ==="
+      - "{{ 'Already completed (database exists)' if nimbus_db.stat.exists else 'Completed successfully' }}"
+      - "Database location: {{ nimbus_data_dir }}/db"
+      - "Checkpoint URL: {{ checkpoint_sync_url }}"
+      - ""
+      - "{{ 'Consensus client will start from checkpoint state' if not nimbus_db.stat.exists else 'Using existing database' }}"

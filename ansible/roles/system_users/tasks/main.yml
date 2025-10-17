@@ -1,0 +1,53 @@
+---
+# Create system users for Ethereum validator services
+
+- name: Create shared ethereum group
+  group:
+    name: ethereum
+    state: present
+    system: yes
+
+- name: Create system groups
+  group:
+    name: "{{ item.group }}"
+    state: present
+    system: "{{ item.system | default(false) }}"
+  loop: "{{ system_users }}"
+
+- name: Create system users
+  user:
+    name: "{{ item.name }}"
+    group: "{{ item.group }}"
+    groups: "{{ item.groups | default([]) }}"
+    append: yes
+    system: "{{ item.system | default(false) }}"
+    shell: "{{ item.shell }}"
+    home: "{{ item.home }}"
+    create_home: "{{ item.create_home }}"
+    state: present
+  loop: "{{ system_users }}"
+
+- name: Set ownership for data directories
+  file:
+    path: "{{ item.data_dir }}"
+    owner: "{{ item.name }}"
+    group: "{{ item.group }}"
+    mode: '0700'
+    state: directory
+  loop: "{{ system_users }}"
+  when: item.data_dir is defined
+
+- name: Verify user creation
+  getent:
+    database: passwd
+    key: "{{ item.name }}"
+  loop: "{{ system_users }}"
+  register: user_verify
+
+- name: Display created users
+  debug:
+    msg:
+      - "=== System Users Created ==="
+      - "Execution user: {{ system_users[0].name }} (UID: {{ user_verify.results[0].ansible_facts.getent_passwd[system_users[0].name][1] }})"
+      - "Consensus user: {{ system_users[1].name }} (UID: {{ user_verify.results[1].ansible_facts.getent_passwd[system_users[1].name][1] }})"
+      - "Validator user: {{ system_users[2].name }} (UID: {{ user_verify.results[2].ansible_facts.getent_passwd[system_users[2].name][1] }})"

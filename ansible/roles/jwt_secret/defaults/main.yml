@@ -1,0 +1,5 @@
+---
+# Default variables for jwt_secret role
+
+jwt_secret_path: "{{ secrets_dir }}/jwtsecret"
+jwt_secret_perms: "0640"

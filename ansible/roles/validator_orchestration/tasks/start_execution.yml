@@ -1,0 +1,37 @@
+---
+# Start execution layer (Nethermind)
+
+- name: Start Nethermind execution client
+  systemd:
+    name: execution
+    state: started
+  register: execution_start
+
+- name: Wait for execution client to initialize
+  pause:
+    seconds: 10
+
+- name: Check execution client is running
+  systemd:
+    name: execution
+  register: execution_status
+  failed_when: execution_status.status.ActiveState != "active"
+
+- name: Display execution client logs (last 20 lines)
+  shell: journalctl -u execution -n 20 --no-pager
+  register: execution_logs
+  changed_when: false
+
+- name: Show execution startup status
+  debug:
+    msg:
+      - "=== Execution Layer Started ==="
+      - "Service: execution.service"
+      - "Status: {{ execution_status.status.ActiveState }}"
+      - "PID: {{ execution_status.status.MainPID | default('N/A') }}"
+      - ""
+      - "Recent logs:"
+      - "{{ execution_logs.stdout_lines[-10:] | join('\n') }}"
+      - ""
+      - "Note: Execution client will sync in background. Monitor with:"
+      - "  sudo journalctl -fu execution | ccze"

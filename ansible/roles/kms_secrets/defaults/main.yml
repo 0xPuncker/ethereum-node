@@ -1,0 +1,26 @@
+---
+# Default variables for kms_secrets role
+
+# GCP Project settings
+gcp_project_id: "{{ lookup('env', 'GCP_PROJECT_ID') | default('psychic-sensor-440111-i3', true) }}"
+gcp_region: "{{ lookup('env', 'GCP_REGION') | default('us-central1', true) }}"
+
+# KMS Configuration
+kms_keyring_name: "eth-validator-val-keyring"
+kms_key_name: "eth-validator"
+kms_location: "{{ gcp_region }}"
+
+# GCS Bucket for encrypted keys
+gcs_bucket_name: "eth-validator-bucket"
+gcs_encrypted_keys_prefix: "validator-keys/encrypted"
+
+# Local paths on validator VM
+validator_keys_encrypted_dir: "/var/lib/validator-keys/encrypted"
+validator_keys_decrypted_dir: "/run/validator-keys"  # tmpfs - memory only
+validator_keys_owner: "validator"
+validator_keys_group: "validator"
+
+# Security settings
+auto_decrypt_on_boot: true
+cleanup_decrypted_on_stop: true
+audit_kms_access: true

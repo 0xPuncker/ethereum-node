@@ -1,0 +1,41 @@
+---
+# SSH hardening configuration
+
+- name: Test SSH configuration before applying
+  command: sshd -t
+  register: sshd_test
+  changed_when: false
+  failed_when: false
+
+- name: Configure SSH daemon
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+    validate: 'sshd -t -f %s'
+  loop:
+    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin {{ ssh_root_login }}' }
+    - { regexp: '^#?PubkeyAuthentication', line: 'PubkeyAuthentication {{ "yes" if ssh_pubkey_auth else "no" }}' }
+    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication {{ "yes" if ssh_password_auth else "no" }}' }
+    - { regexp: '^#?PermitEmptyPasswords', line: 'PermitEmptyPasswords no' }
+    - { regexp: '^#?Port', line: 'Port {{ ssh_port }}' }
+    - { regexp: '^#?X11Forwarding', line: 'X11Forwarding no' }
+    - { regexp: '^#?MaxAuthTries', line: 'MaxAuthTries 3' }
+    - { regexp: '^#?ClientAliveInterval', line: 'ClientAliveInterval 300' }
+    - { regexp: '^#?ClientAliveCountMax', line: 'ClientAliveCountMax 2' }
+
+- name: Ensure SSH service is enabled (but don't restart if already running)
+  systemd:
+    name: ssh
+    enabled: yes
+
+- name: Display SSH configuration notice
+  debug:
+    msg:
+      - "=== SSH Configuration Applied ==="
+      - "SSH configuration has been updated and validated."
+      - "Service was NOT restarted to prevent connection loss."
+      - "If you need to apply SSH changes immediately, manually run:"
+      - "  sudo systemctl restart ssh"
+      - "WARNING: Only restart SSH when you have console access!"

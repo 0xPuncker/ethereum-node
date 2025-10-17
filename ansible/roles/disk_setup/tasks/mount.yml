@@ -1,0 +1,37 @@
+---
+# Mount disk and configure fstab
+
+- name: Create mount point directory
+  file:
+    path: "{{ mount_point }}"
+    state: directory
+    mode: '0755'
+
+- name: Mount disk
+  mount:
+    path: "{{ mount_point }}"
+    src: "{{ disk_device }}"
+    fstype: "{{ filesystem }}"
+    opts: "{{ mount_options }}"
+    state: mounted
+
+- name: Ensure mount persists in fstab
+  mount:
+    path: "{{ mount_point }}"
+    src: "{{ disk_device }}"
+    fstype: "{{ filesystem }}"
+    opts: "{{ mount_options }}"
+    state: present
+
+- name: Create validator subdirectories
+  file:
+    path: "{{ mount_point }}/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ validator_subdirs }}"
+
+- name: Set secure permissions on secrets directory
+  file:
+    path: "{{ mount_point }}/secrets"
+    state: directory
+    mode: '0700'

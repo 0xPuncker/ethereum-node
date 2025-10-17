@@ -1,0 +1,29 @@
+---
+# Default variables for system_users role
+
+system_users:
+  - name: execution
+    group: execution
+    groups: [ethereum]
+    system: yes
+    shell: /bin/false
+    home: /nonexistent
+    create_home: no
+    data_dir: "{{ mount_point }}/nethermind"
+
+  - name: consensus
+    group: consensus
+    groups: [ethereum]
+    system: yes
+    shell: /bin/false
+    home: /nonexistent
+    create_home: no
+    data_dir: "{{ mount_point }}/nimbus"
+
+  - name: validator
+    group: validator
+    system: yes
+    shell: /bin/false
+    home: /nonexistent
+    create_home: no
+    data_dir: "{{ mount_point }}/nimbus_validator"

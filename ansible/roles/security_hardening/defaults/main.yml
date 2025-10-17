@@ -1,0 +1,33 @@
+---
+# Default variables for security_hardening role
+
+# SSH configuration
+ssh_port: 22
+ssh_pubkey_auth: yes
+ssh_password_auth: no
+ssh_root_login: "prohibit-password"
+ssh_permit_empty_passwords: no
+
+# Firewall rules
+firewall_rules:
+  - { port: 22, proto: tcp, comment: "SSH" }
+  - { port: 30303, proto: tcp, comment: "Nethermind P2P TCP" }
+  - { port: 30303, proto: udp, comment: "Nethermind P2P UDP" }
+  - { port: 9000, proto: tcp, comment: "Nimbus P2P TCP" }
+  - { port: 9000, proto: udp, comment: "Nimbus P2P UDP" }
+
+# Optional monitoring ports (uncomment if needed)
+# - { port: 9090, proto: tcp, comment: "Prometheus" }
+# - { port: 3000, proto: tcp, comment: "Grafana" }
+
+# Essential packages
+security_packages:
+  - ufw
+  - fail2ban
+  - chrony
+  - unattended-upgrades
+
+# Fail2ban configuration
+fail2ban_maxretry: 5
+fail2ban_findtime: 600
+fail2ban_bantime: 3600

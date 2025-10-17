@@ -1,0 +1,21 @@
+---
+# Format disk with specified filesystem
+
+- name: Unmount disk if currently mounted
+  mount:
+    path: "{{ mount_point }}"
+    state: unmounted
+  when: mount_check.rc == 0
+  ignore_errors: true
+
+- name: Create filesystem on disk
+  filesystem:
+    fstype: "{{ filesystem }}"
+    dev: "{{ disk_device }}"
+    opts: "-L validator-data"
+  register: format_result
+
+- name: Display formatting result
+  debug:
+    msg: "Disk {{ disk_device }} formatted with {{ filesystem }} filesystem"
+  when: format_result.changed

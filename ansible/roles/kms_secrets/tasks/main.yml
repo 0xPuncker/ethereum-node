@@ -1,0 +1,84 @@
+---
+# Main tasks for KMS secrets management
+
+- name: Install Google Cloud SDK (if not present)
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+    state: present
+    update_cache: yes
+
+- name: Add Google Cloud SDK repository key
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+
+- name: Add Google Cloud SDK repository
+  apt_repository:
+    repo: "deb https://packages.cloud.google.com/apt cloud-sdk main"
+    state: present
+    filename: google-cloud-sdk
+
+- name: Install gcloud CLI
+  apt:
+    name: google-cloud-cli
+    state: present
+    update_cache: yes
+
+- name: Create encrypted keys directory
+  file:
+    path: "{{ validator_keys_encrypted_dir }}"
+    state: directory
+    owner: "{{ validator_keys_owner }}"
+    group: "{{ validator_keys_group }}"
+    mode: '0700'
+
+- name: Create tmpfs mount point for decrypted keys
+  file:
+    path: "{{ validator_keys_decrypted_dir }}"
+    state: directory
+    owner: "{{ validator_keys_owner }}"
+    group: "{{ validator_keys_group }}"
+    mode: '0700'
+
+- name: Mount tmpfs for decrypted keys (memory-only storage)
+  mount:
+    path: "{{ validator_keys_decrypted_dir }}"
+    src: tmpfs
+    fstype: tmpfs
+    opts: "size=100M,mode=0700,uid={{ validator_keys_owner }},gid={{ validator_keys_group }}"
+    state: mounted
+
+- name: Deploy key decryption script
+  template:
+    src: decrypt-validator-keys.sh.j2
+    dest: /usr/local/bin/decrypt-validator-keys.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Deploy key cleanup script
+  template:
+    src: cleanup-validator-keys.sh.j2
+    dest: /usr/local/bin/cleanup-validator-keys.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Display KMS configuration status
+  debug:
+    msg:
+      - "=== KMS Secrets Configuration Complete ==="
+      - "KMS Keyring: {{ kms_keyring_name }}"
+      - "KMS Key: {{ kms_key_name }}"
+      - "GCS Bucket: {{ gcs_bucket_name }}"
+      - "Encrypted keys directory: {{ validator_keys_encrypted_dir }}"
+      - "Decrypted keys directory: {{ validator_keys_decrypted_dir }} (tmpfs)"
+      - ""
+      - "Security Features:"
+      - "  • Decrypted keys stored in memory-only tmpfs"
+      - "  • Auto-decrypt on service start"
+      - "  • Auto-cleanup on service stop"
+      - "  • Strict file permissions (700)"

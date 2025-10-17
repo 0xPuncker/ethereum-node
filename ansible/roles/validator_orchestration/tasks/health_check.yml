@@ -1,0 +1,62 @@
+---
+# Health checks for all services
+
+- name: Check all services are active
+  systemd:
+    name: "{{ item }}"
+  register: service_checks
+  loop:
+    - execution
+    - consensus
+    - "{{ 'validator' if validator_keys_available | default(false) | bool else omit }}"
+  when: item != omit
+
+- name: Check execution client peer count
+  uri:
+    url: "http://127.0.0.1:{{ nethermind_rpc_port }}"
+    method: POST
+    body_format: json
+    body:
+      jsonrpc: "2.0"
+      method: "net_peerCount"
+      params: []
+      id: 1
+    status_code: 200
+  register: execution_peers
+  failed_when: false
+
+- name: Check consensus client sync status
+  uri:
+    url: "http://127.0.0.1:{{ nimbus_rest_port }}/eth/v1/node/syncing"
+    method: GET
+    status_code: 200
+  register: consensus_sync
+  failed_when: false
+
+- name: Check disk usage
+  shell: df -h {{ mount_point }} | tail -1
+  register: disk_usage
+  changed_when: false
+
+- name: Display comprehensive health check
+  debug:
+    msg:
+      - "=== System Health Check ==="
+      - ""
+      - "Services Status:"
+      - "  Execution: {{ service_checks.results[0].status.ActiveState | default('unknown') }}"
+      - "  Consensus: {{ service_checks.results[1].status.ActiveState | default('unknown') }}"
+      - "  Validator: {{ service_checks.results[2].status.ActiveState | default('not running') if validator_keys_available | default(false) | bool else 'not configured' }}"
+      - ""
+      - "Network Status:"
+      - "  Execution peers: {{ execution_peers.json.result | default('N/A') if execution_peers.status == 200 else 'checking...' }}"
+      - "  Consensus syncing: {{ consensus_sync.json.data.is_syncing | default('N/A') if consensus_sync.status == 200 else 'checking...' }}"
+      - ""
+      - "Disk Usage:"
+      - "  {{ disk_usage.stdout }}"
+      - ""
+      - "Monitoring Commands:"
+      - "  sudo journalctl -fu execution | ccze"
+      - "  sudo journalctl -fu consensus | ccze"
+      - "  {{ 'sudo journalctl -fu validator | ccze' if validator_keys_available | default(false) | bool else '# Import validator keys first' }}"
+      - "  sudo systemctl status execution consensus{{ ' validator' if validator_keys_available | default(false) | bool else '' }}"
