@@ -52,3 +52,13 @@ output "ansible_user" {
   description = "SSH user for Ansible connections"
   value       = var.ansible_user
 }
+
+output "kms_keyring_name" {
+  description = "Name of the KMS key ring"
+  value       = "${var.resource_prefix}-keyring"
+}
+
+output "kms_key_name" {
+  description = "Name of the KMS crypto key"
+  value       = var.resource_prefix
+}

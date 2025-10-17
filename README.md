@@ -1,12 +1,33 @@
 # Ethereum Testnet Validator
 
+<div align="center">
 <p align="center">
-  <img src="https://beincrypto.com/wp-content/uploads/2024/09/bic_EthereumPoW_ETHW_3-covers_neutral.jpg" alt="Ethereum Hoodi Testnet" width="200"/>
+  <img src="https://beincrypto.com/wp-content/uploads/2024/09/bic_EthereumPoW_ETHW_3-covers_neutral.jpg" alt="Ethereum Hoodi Testnet" width="350"/>
 </p>
 
-Deploy a **production-grade Ethereum validator** on a public testnet using "one-click deployment" from a clean environment.
+<div align="center">
+  This repository is a one-click deployment solution for running a Ethereum node (testnet) on VM (GCP).
 
-**Current Implementation:** Ansible-based deployment on GCP with Nethermind (execution) + Nimbus (consensus)
+  > **Current Implementation:** Ansible-based deployment with Nethermind (execution) + Nimbus (consensus)
+</div>
+
+<br />
+<div align="center">
+  <!-- Docker -->
+  <a href="https://www.docker.com/">
+    <img src="https://img.shields.io/badge/Docker-v28+-blue" alt="Docker" />
+  </a>
+   <!-- Ansible -->
+    <a href="https://www.ansible.com/">
+      <img src="https://img.shields.io/badge/Ansible-v2.9+-blue" alt="Ansible" />
+    </a>
+    <!-- MIT License -->
+    <a href="https://opensource.org/licenses/MIT">
+      <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License" />
+    </a>
+
+</div>
+<br />
 
 ## 📑 Table of Contents
 
