@@ -1,7 +1,7 @@
 # Ethereum Testnet Validator
 
 <p align="center">
-  <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png?v=032" alt="Ethereum Hoodi Testnet" width="200"/>
+  <img src="https://beincrypto.com/wp-content/uploads/2024/09/bic_EthereumPoW_ETHW_3-covers_neutral.jpg" alt="Ethereum Hoodi Testnet" width="350"/>
 </p>
 
 <p align="center">
