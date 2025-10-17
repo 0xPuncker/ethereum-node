@@ -1,6 +1,6 @@
 locals {
   region                = var.region
-  prefix                 = var.resource_prefix
+  prefix                = var.resource_prefix
   ssh_public_cidr       = ["${trimspace(data.http.my_public_ip.response_body)}/32"]
   sanitized_common_tags = { for k, v in var.common_tags : lower(k) => lower(v) }
   common_tags = merge(
@@ -18,13 +18,15 @@ data "http" "my_public_ip" {
 }
 
 module "kms" {
-  source          = "./modules/kms"
-  project_id      = var.project_id
-  region          = local.region
-  crypto_key_name = local.prefix
-  rotation_period = var.kms_rotation_period
-  key_ring_name   = "${local.prefix}-keyring"
-  common_tags     = merge(local.common_tags, { component = "kms" })
+  source            = "./modules/kms"
+  project_id        = var.project_id
+  region            = local.region
+  crypto_key_name   = local.prefix
+  rotation_period   = var.kms_rotation_period
+  key_ring_name     = "${local.prefix}-keyring"
+  common_tags       = merge(local.common_tags, { component = "kms" })
+  create_key_ring   = var.kms_create_key_ring
+  create_crypto_key = var.kms_create_crypto_key
 }
 
 module "network" {
@@ -71,7 +73,7 @@ module "storage" {
 module "loadbalancer" {
   source         = "./modules/loadbalancer"
   project_id     = var.project_id
-  name_prefix     = "${local.prefix}-lb"
+  name_prefix    = "${local.prefix}-lb"
   instance_group = module.compute.instance_group_id
   common_tags    = merge(local.common_tags, { component = "loadbalancer" })
 }

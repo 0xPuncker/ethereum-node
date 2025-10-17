@@ -23,6 +23,18 @@ variable "rotation_period" {
   type        = string
 }
 
+variable "create_key_ring" {
+  description = "Whether to create the key ring (set to false to use an existing key ring)"
+  type        = bool
+  default     = true
+}
+
+variable "create_crypto_key" {
+  description = "Whether to create the crypto key (set to false to use an existing crypto key)"
+  type        = bool
+  default     = true
+}
+
 variable "common_tags" {
   description = "Common tags to apply to KMS resources"
   type        = map(string)

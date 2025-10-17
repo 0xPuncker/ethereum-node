@@ -79,10 +79,22 @@ variable "kms_rotation_period" {
   default     = "2592000s"
 }
 
+variable "kms_create_key_ring" {
+  description = "Whether Terraform should create the KMS key ring (set to false to use an existing key ring)"
+  type        = bool
+  default     = true
+}
+
+variable "kms_create_crypto_key" {
+  description = "Whether Terraform should create the KMS crypto key (set to false to use an existing crypto key)"
+  type        = bool
+  default     = true
+}
+
 variable "ansible_user" {
   description = "SSH user for Ansible connections"
   type        = string
-  default     = "raulneiva"
+  default     = ""
 }
 
 variable "ssh_public_key_file" {
