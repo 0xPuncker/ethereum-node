@@ -1,0 +1,19 @@
+---
+# Default variables for nimbus role
+
+nimbus_version: "latest"
+nimbus_beacon_bin: "/usr/local/bin/nimbus_beacon_node"
+nimbus_validator_bin: "/usr/local/bin/nimbus_validator_client"
+nimbus_data_dir: "{{ mount_point }}/nimbus"
+nimbus_validator_data_dir: "{{ mount_point }}/nimbus_data"
+nimbus_user: "consensus"
+nimbus_group: "consensus"
+
+# Network configuration
+nimbus_p2p_port: 9000
+nimbus_rest_port: 5052
+nimbus_metrics_port: 8008
+validator_metrics_port: 8009
+
+# GitHub API
+nimbus_github_api: "https://api.github.com/repos/status-im/nimbus-eth2/releases/latest"

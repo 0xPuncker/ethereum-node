@@ -1,0 +1,21 @@
+---
+# Default variables for nethermind role
+
+nethermind_version: "latest"
+nethermind_install_dir: "/usr/local/bin/nethermind"
+nethermind_data_dir: "{{ mount_point }}/nethermind"
+nethermind_user: "execution"
+nethermind_group: "execution"
+
+# Network configuration
+nethermind_p2p_port: 30303
+nethermind_rpc_port: 8545
+nethermind_engine_port: 8551
+nethermind_metrics_port: 6060
+
+# Performance settings
+nethermind_pruning_mode: "Hybrid"
+nethermind_memory_hint: "8192"  # MB
+
+# GitHub API
+nethermind_github_api: "https://api.github.com/repos/NethermindEth/nethermind/releases/latest"

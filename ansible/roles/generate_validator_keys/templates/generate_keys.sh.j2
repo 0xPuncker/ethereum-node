@@ -1,0 +1,42 @@
+#!/bin/bash
+# Automated validator key generation script
+set -euo pipefail
+
+DEPOSIT_BIN="{{ deposit_cli_binary_path }}"
+WORKSPACE="{{ deposit_cli_workspace_dir }}"
+MNEMONIC="{{ deposit_cli_mnemonic }}"
+START_INDEX="{{ deposit_cli_validator_start_index }}"
+NUM_VALIDATORS="{{ deposit_cli_validators }}"
+CHAIN="{{ deposit_cli_chain }}"
+FEE_RECIPIENT="{{ fee_recipient_address }}"
+KEYSTORE_PASSWORD="{{ deposit_cli_keystore_password }}"
+LANGUAGE="{{ deposit_cli_language }}"
+
+# Create workspace
+mkdir -p "$WORKSPACE"
+cd "$WORKSPACE"
+
+# Run deposit-cli with all parameters passed as flags (non-interactive)
+"$DEPOSIT_BIN" \
+  --non_interactive \
+  --language "$LANGUAGE" \
+  existing-mnemonic \
+  --mnemonic "$MNEMONIC" \
+  --mnemonic_language "$LANGUAGE" \
+  --validator_start_index "$START_INDEX" \
+  --num_validators "$NUM_VALIDATORS" \
+  --chain "$CHAIN" \
+  --folder "$WORKSPACE" \
+  --execution_address "$FEE_RECIPIENT" \
+  --keystore_password "$KEYSTORE_PASSWORD" \
+  --regular-withdrawal
+
+# Check if keys were generated
+if [ -d "$WORKSPACE/validator_keys" ]; then
+  KEY_COUNT=$(find "$WORKSPACE/validator_keys" -name "keystore-*.json" | wc -l)
+  echo "SUCCESS: Generated $KEY_COUNT validator keystore(s)"
+  exit 0
+else
+  echo "ERROR: validator_keys directory not found"
+  exit 1
+fi

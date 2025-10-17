@@ -1,0 +1,44 @@
+[Unit]
+Description=Nimbus Beacon Node ({{ testnet_network }})
+Wants=network-online.target
+After=network-online.target
+Documentation=https://nimbus.guide/
+
+[Service]
+Type=simple
+User={{ nimbus_user }}
+Group={{ nimbus_group }}
+Restart=always
+RestartSec=3
+
+ExecStart={{ nimbus_beacon_bin }} \
+  --network={{ testnet_network }} \
+  --data-dir={{ nimbus_data_dir }} \
+  --web3-url=http://127.0.0.1:{{ nethermind_engine_port }} \
+  --jwt-secret={{ jwt_secret_path }} \
+  --tcp-port={{ nimbus_p2p_port }} \
+  --udp-port={{ nimbus_p2p_port }} \
+  --rest \
+  --rest-port={{ nimbus_rest_port }} \
+  --rest-address=127.0.0.1 \
+  --metrics \
+  --metrics-port={{ nimbus_metrics_port }} \
+  --metrics-address=127.0.0.1 \
+  --suggested-fee-recipient={{ fee_recipient_address }} \
+  --checkpoint-sync-url={{ checkpoint_sync_url }} \
+  --external-beacon-api-url={{ checkpoint_sync_url }} \
+  --history=prune \
+  --max-peers=100 \
+  --log-level=INFO
+
+# Resource limits
+LimitNOFILE=65536
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

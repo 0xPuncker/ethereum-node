@@ -1,0 +1,86 @@
+---
+# Install Nethermind execution client
+
+- name: Install Nethermind dependencies
+  apt:
+    name:
+      - libsnappy-dev
+      - libc6-dev
+      - unzip
+      - jq
+      - curl
+    state: present
+
+- name: Check if Nethermind is already installed
+  stat:
+    path: "{{ nethermind_install_dir }}/nethermind"
+  register: nethermind_binary
+
+- name: Get latest Nethermind release URL
+  shell: |
+    curl -s {{ nethermind_github_api }} | \
+    jq -r '.assets[] | select(.name | contains("linux-x64")) | .browser_download_url' | \
+    head -1
+  register: nethermind_download_url
+  when: not nethermind_binary.stat.exists
+  changed_when: false
+
+- name: Display download URL
+  debug:
+    msg: "Downloading Nethermind from: {{ nethermind_download_url.stdout }}"
+  when: not nethermind_binary.stat.exists
+
+- name: Download Nethermind binary
+  get_url:
+    url: "{{ nethermind_download_url.stdout }}"
+    dest: "/tmp/nethermind.zip"
+    mode: '0644'
+  when: not nethermind_binary.stat.exists
+
+- name: Create temporary extraction directory
+  file:
+    path: "/tmp/nethermind_extract"
+    state: directory
+  when: not nethermind_binary.stat.exists
+
+- name: Extract Nethermind binary
+  unarchive:
+    src: "/tmp/nethermind.zip"
+    dest: "/tmp/nethermind_extract"
+    remote_src: yes
+  when: not nethermind_binary.stat.exists
+
+- name: Create Nethermind installation directory
+  file:
+    path: "{{ nethermind_install_dir }}"
+    state: directory
+    mode: '0755'
+  when: not nethermind_binary.stat.exists
+
+- name: Move Nethermind files to installation directory
+  shell: mv /tmp/nethermind_extract/* {{ nethermind_install_dir }}/
+  when: not nethermind_binary.stat.exists
+  changed_when: true
+
+- name: Set executable permissions
+  file:
+    path: "{{ nethermind_install_dir }}/nethermind"
+    mode: '0755'
+  when: not nethermind_binary.stat.exists
+
+- name: Clean up temporary files
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/tmp/nethermind.zip"
+    - "/tmp/nethermind_extract"
+  when: not nethermind_binary.stat.exists
+
+- name: Ensure data directory exists with correct ownership
+  file:
+    path: "{{ nethermind_data_dir }}"
+    state: directory
+    owner: "{{ nethermind_user }}"
+    group: "{{ nethermind_group }}"
+    mode: '0700'

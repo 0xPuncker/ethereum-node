@@ -1,0 +1,111 @@
+---
+# Generate mnemonic and validator keys using EthStaker deposit-cli
+
+- name: Ensure keystore password is provided
+  ansible.builtin.assert:
+    that:
+      - deposit_cli_keystore_password | length > 0
+    fail_msg: "deposit_cli_keystore_password must be provided for non-interactive deposit-cli execution."
+
+- name: Ensure staking-deposit workspace directory exists
+  ansible.builtin.file:
+    path: "{{ deposit_cli_workspace_dir }}"
+    state: directory
+    owner: "{{ deposit_cli_owner }}"
+    group: "{{ deposit_cli_group }}"
+    mode: "{{ deposit_cli_workspace_mode }}"
+
+- name: Remove stored mnemonic when forcing regeneration
+  ansible.builtin.file:
+    path: "{{ deposit_cli_mnemonic_path }}"
+    state: absent
+  when: deposit_cli_force_regenerate | bool
+
+- name: Check for existing validator keys
+  ansible.builtin.stat:
+    path: "{{ deposit_cli_workspace_dir }}/validator_keys"
+  register: deposit_cli_keys_dir
+
+- name: Remove existing validator keys when forcing regeneration
+  ansible.builtin.file:
+    path: "{{ deposit_cli_workspace_dir }}/validator_keys"
+    state: absent
+  when:
+    - deposit_cli_force_regenerate | bool
+    - deposit_cli_keys_dir.stat.exists
+
+- name: Deploy key generation script
+  ansible.builtin.template:
+    src: generate_keys.sh.j2
+    dest: "{{ deposit_cli_workspace_dir }}/generate_keys.sh"
+    owner: "{{ deposit_cli_owner }}"
+    group: "{{ deposit_cli_group }}"
+    mode: "0700"
+  when:
+    - deposit_cli_mnemonic | length > 0
+    - deposit_cli_force_regenerate | bool or not deposit_cli_keys_dir.stat.exists
+
+- name: Generate validator keys from existing mnemonic
+  ansible.builtin.command:
+    cmd: "{{ deposit_cli_workspace_dir }}/generate_keys.sh"
+  register: deposit_cli_generate_cmd
+  no_log: false
+  when:
+    - deposit_cli_mnemonic | length > 0
+    - deposit_cli_force_regenerate | bool or not deposit_cli_keys_dir.stat.exists
+
+- name: Display key generation output
+  ansible.builtin.debug:
+    msg: "{{ deposit_cli_generate_cmd.stdout_lines }}"
+  when:
+    - deposit_cli_generate_cmd is defined
+    - deposit_cli_generate_cmd.stdout_lines is defined
+
+- name: Generate new mnemonic and validator keys
+  ansible.builtin.command:
+    argv:
+      - "{{ deposit_cli_expect_script }}"
+      - "{{ deposit_cli_binary_path }}"
+      - "{{ deposit_cli_validators | string }}"
+      - "{{ deposit_cli_chain }}"
+      - "{{ deposit_cli_workspace_dir }}"
+      - "{{ fee_recipient_address }}"
+      - "{{ deposit_cli_keystore_password }}"
+      - "{{ deposit_cli_language }}"
+      - "{{ deposit_cli_mnemonic_path }}"
+    chdir: "{{ deposit_cli_workspace_dir }}"
+  no_log: true
+  register: deposit_cli_generate_cmd
+  when:
+    - deposit_cli_mnemonic | length == 0
+    - deposit_cli_force_regenerate | bool or not deposit_cli_keys_dir.stat.exists
+
+- name: Check mnemonic file presence
+  ansible.builtin.stat:
+    path: "{{ deposit_cli_mnemonic_path }}"
+  register: deposit_cli_mnemonic_stat
+  when: deposit_cli_force_regenerate | bool or not deposit_cli_keys_dir.stat.exists
+
+- name: Secure mnemonic file permissions
+  ansible.builtin.file:
+    path: "{{ deposit_cli_mnemonic_path }}"
+    owner: "{{ deposit_cli_owner }}"
+    group: "{{ deposit_cli_group }}"
+    mode: "0600"
+  when:
+    - deposit_cli_mnemonic_stat.stat.exists | default(false)
+
+- name: Set fact for deposit-cli generation status
+  ansible.builtin.set_fact:
+    deposit_cli_generated: "{{ deposit_cli_generate_cmd is defined and (deposit_cli_generate_cmd is succeeded) }}"
+  when: deposit_cli_force_regenerate | bool or not deposit_cli_keys_dir.stat.exists
+
+- name: Display deposit-cli workspace info
+  ansible.builtin.debug:
+    msg:
+      - "EthStaker deposit-cli workspace: {{ deposit_cli_workspace_dir }}"
+      - "Validator keystores (if generated): {{ deposit_cli_workspace_dir }}/validator_keys"
+      - "Deposit data files (if generated): {{ deposit_cli_workspace_dir }}/validator_keys/deposit_data-*.json"
+      - "Mnemonic stored at: {{ deposit_cli_mnemonic_path }} (permissions 0600)"
+      - "Mnemonic displayed ONLY during command execution; ensure it is securely stored."
+  when: deposit_cli_generate_cmd is defined

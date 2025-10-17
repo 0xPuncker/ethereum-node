@@ -1,0 +1,31 @@
+---
+# Configure Nimbus validator client systemd service
+
+- name: Deploy Nimbus validator systemd service file
+  template:
+    src: validator.service.j2
+    dest: /etc/systemd/system/validator.service
+    mode: '0644'
+  notify: reload systemd
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Enable Nimbus validator service
+  systemd:
+    name: validator
+    enabled: yes
+
+- name: Display validator service configuration
+  debug:
+    msg:
+      - "=== Nimbus Validator Client Configured ==="
+      - "Service: validator.service"
+      - "Binary: {{ nimbus_validator_bin }}"
+      - "Data directory: {{ nimbus_validator_data_dir }}"
+      - "Beacon node: http://127.0.0.1:{{ nimbus_rest_port }}"
+      - "Metrics Port: {{ validator_metrics_port }}"
+      - "Fee recipient: {{ fee_recipient_address }}"
+      - "Graffiti: {{ validator_graffiti }}"
+      - "Status: Enabled (not started yet)"

@@ -1,0 +1,32 @@
+---
+# Configure Nethermind systemd service
+
+- name: Deploy Nethermind systemd service file
+  template:
+    src: execution.service.j2
+    dest: /etc/systemd/system/execution.service
+    mode: '0644'
+  notify: reload systemd
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Enable Nethermind service
+  systemd:
+    name: execution
+    enabled: yes
+
+- name: Display service configuration
+  debug:
+    msg:
+      - "=== Nethermind Service Configured ==="
+      - "Service: execution.service"
+      - "Binary: {{ nethermind_install_dir }}/nethermind"
+      - "Data directory: {{ nethermind_data_dir }}"
+      - "Network: {{ testnet_network }}"
+      - "P2P Port: {{ nethermind_p2p_port }}"
+      - "RPC Port: {{ nethermind_rpc_port }}"
+      - "Engine Port: {{ nethermind_engine_port }}"
+      - "Metrics Port: {{ nethermind_metrics_port }}"
+      - "Status: Enabled (not started yet)"

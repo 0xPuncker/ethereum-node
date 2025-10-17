@@ -1,0 +1,86 @@
+---
+# Install Nimbus consensus client
+
+- name: Check if Nimbus beacon is already installed
+  stat:
+    path: "{{ nimbus_beacon_bin }}"
+  register: nimbus_beacon_binary
+
+- name: Get latest Nimbus release URL
+  shell: |
+    curl -s {{ nimbus_github_api }} | \
+    jq -r '.assets[] | select(.name | contains("Linux_amd64") and endswith(".tar.gz")) | .browser_download_url' | \
+    head -1
+  register: nimbus_download_url
+  when: not nimbus_beacon_binary.stat.exists
+  changed_when: false
+
+- name: Display download URL
+  debug:
+    msg: "Downloading Nimbus from: {{ nimbus_download_url.stdout }}"
+  when: not nimbus_beacon_binary.stat.exists
+
+- name: Download Nimbus tarball
+  get_url:
+    url: "{{ nimbus_download_url.stdout }}"
+    dest: "/tmp/nimbus.tar.gz"
+    mode: '0644'
+  when: not nimbus_beacon_binary.stat.exists
+
+- name: Create temporary extraction directory
+  file:
+    path: "/tmp/nimbus_extract"
+    state: directory
+  when: not nimbus_beacon_binary.stat.exists
+
+- name: Extract Nimbus tarball
+  unarchive:
+    src: "/tmp/nimbus.tar.gz"
+    dest: "/tmp/nimbus_extract"
+    remote_src: yes
+    extra_opts: [--strip-components=2]
+  when: not nimbus_beacon_binary.stat.exists
+
+- name: Copy nimbus_beacon_node to /usr/local/bin
+  copy:
+    src: "/tmp/nimbus_extract/nimbus_beacon_node"
+    dest: "{{ nimbus_beacon_bin }}"
+    mode: '0755'
+    remote_src: yes
+  when: not nimbus_beacon_binary.stat.exists
+
+- name: Copy nimbus_validator_client to /usr/local/bin
+  copy:
+    src: "/tmp/nimbus_extract/nimbus_validator_client"
+    dest: "{{ nimbus_validator_bin }}"
+    mode: '0755'
+    remote_src: yes
+  when: not nimbus_beacon_binary.stat.exists
+
+- name: Clean up temporary files
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/tmp/nimbus.tar.gz"
+    - "/tmp/nimbus_extract"
+  when: not nimbus_beacon_binary.stat.exists
+
+- name: Ensure Nimbus parent directory exists
+  file:
+    path: "{{ mount_point }}/nimbus"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure Nimbus data directories exist with correct ownership
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: '0700'
+  loop:
+    - { path: "{{ nimbus_data_dir }}", owner: "{{ nimbus_user }}", group: "{{ nimbus_group }}" }
+    - { path: "{{ nimbus_validator_data_dir }}", owner: "validator", group: "validator" }

@@ -1,0 +1,33 @@
+---
+# Verify Nethermind installation
+
+- name: Check Nethermind binary
+  stat:
+    path: "{{ nethermind_install_dir }}/nethermind"
+  register: nethermind_check
+
+- name: Fail if Nethermind binary not found
+  fail:
+    msg: "Nethermind binary not found at {{ nethermind_install_dir }}/nethermind"
+  when: not nethermind_check.stat.exists
+
+- name: Get Nethermind version
+  command: "{{ nethermind_install_dir }}/nethermind --version"
+  register: nethermind_version_output
+  changed_when: false
+  failed_when: false
+
+- name: Check systemd service file
+  stat:
+    path: /etc/systemd/system/execution.service
+  register: service_check
+
+- name: Display verification results
+  debug:
+    msg:
+      - "=== Nethermind Installation Verified ==="
+      - "Binary exists: {{ nethermind_check.stat.exists }}"
+      - "Binary path: {{ nethermind_install_dir }}/nethermind"
+      - "Service file: {{ service_check.stat.exists }}"
+      - "Data directory: {{ nethermind_data_dir }}"
+      - "Owner: {{ nethermind_user }}:{{ nethermind_group }}"
