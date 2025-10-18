@@ -381,4 +381,4 @@ ssh <vm-ip> 'sudo journalctl -t validator-keys -f'
 
 ## Support
 
-For support, please open an issue on the GitHub repository.
+For support, please open an issue on [GitHub Issues](https://github.com/0xPuncker/ethereum-node/issues).

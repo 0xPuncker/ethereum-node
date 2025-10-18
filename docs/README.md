@@ -226,4 +226,4 @@ When updating documentation:
 5. **Update cross-references** - Keep links between docs synchronized
 6. **Test procedures** - Verify commands work before documenting
 
-For questions or issues, see [GitHub Issues](https://github.com/yourusername/ethereum-node/issues).
+For questions or issues, see [GitHub Issues](https://github.com/0xPuncker/ethereum-node/issues).

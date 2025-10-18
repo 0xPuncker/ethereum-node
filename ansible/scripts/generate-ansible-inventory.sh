@@ -84,8 +84,8 @@ fi
 log_info "Using: ${TF_CMD}"
 
 # Get outputs, redirect all stderr to /dev/null, only capture valid stdout
-VM_IP=$("${TF_CMD}" output -raw vm_external_ip 2>&1 | grep -v "Warning:" | grep -v "╷" | grep -v "│" | grep -v "╵" | tr -d '\n' || true)
-ANSIBLE_USER=$("${TF_CMD}" output -raw ansible_user 2>&1 | grep -v "Warning:" | grep -v "╷" | grep -v "│" | grep -v "╵" | tr -d '\n' || true)
+VM_IP=$("${TF_CMD}" output -raw vm_external_ip 2>&1 | grep -v "Warning:" | grep -v "╷" | grep -v "│" | grep -v "╵" | tr -d '\n')
+ANSIBLE_USER=$("${TF_CMD}" output -raw ansible_user 2>&1 | grep -v "Warning:" | grep -v "╷" | grep -v "│" | grep -v "╵" | tr -d '\n')
 if [[ -z "${ANSIBLE_USER}" ]] && command -v terraform &>/dev/null && [[ "${TF_CMD}" != "terraform" ]]; then
     log_warn "Fallback to terraform output for ansible_user"
     ANSIBLE_USER=$(terraform output -raw ansible_user 2>&1 | grep -v "Warning:" | grep -v "╷" | grep -v "│" | grep -v "╵" | tr -d '\n' || true)
@@ -109,8 +109,8 @@ if [[ -z "${ANSIBLE_USER}" ]]; then
     log_warn "ansible_user not found; defaulting to current user"
     ANSIBLE_USER="${USER:-ubuntu}"
 fi
-BUCKET_NAME=$("${TF_CMD}" output -raw bucket_name 2>&1 | grep -v "Warning:" | grep -v "╷" | grep -v "│" | grep -v "╵" | tr -d '\n' || true)
-KMS_KEY_ID=$("${TF_CMD}" output -raw kms_crypto_key_id 2>&1 | grep -v "Warning:" | grep -v "╷" | grep -v "│" | grep -v "╵" | tr -d '\n' || true)
+BUCKET_NAME=$("${TF_CMD}" output -raw bucket_name 2>&1 | grep -v "Warning:" | grep -v "╷" | grep -v "│" | grep -v "╵" | tr -d '\n')
+KMS_KEY_ID=$("${TF_CMD}" output -raw kms_crypto_key_id 2>&1 | grep -v "Warning:" | grep -v "╷" | grep -v "│" | grep -v "╵" | tr -d '\n')
 
 # Validate outputs
 if [[ -z "${VM_IP}" ]] || [[ "${VM_IP}" == "The state file"* ]]; then
@@ -192,13 +192,13 @@ fi
 # Parse KMS details from KMS key ID
 # Format: projects/{project}/locations/{location}/keyRings/{keyring}/cryptoKeys/{key}
 if [[ -n "${KMS_KEY_ID}" ]]; then
-    KMS_LOCATION=$(echo "${KMS_KEY_ID}" | cut -d'/' -f4)
-    KMS_KEYRING=$(echo "${KMS_KEY_ID}" | cut -d'/' -f6)
-    KMS_KEY=$(echo "${KMS_KEY_ID}" | cut -d'/' -f8)
+    KMS_LOCATION_PARSED=$(echo "${KMS_KEY_ID}" | cut -d'/' -f4)
+    KMS_KEYRING_PARSED=$(echo "${KMS_KEY_ID}" | cut -d'/' -f6)
+    KMS_KEY_PARSED=$(echo "${KMS_KEY_ID}" | cut -d'/' -f8)
 else
-    KMS_LOCATION=""
-    KMS_KEYRING=""
-    KMS_KEY=""
+    KMS_LOCATION_PARSED=""
+    KMS_KEYRING_PARSED=""
+    KMS_KEY_PARSED=""
 fi
 
 # Get GCP project number
@@ -218,9 +218,9 @@ export VM_EXTERNAL_IP="${VM_IP}"
 export ANSIBLE_USER="${ANSIBLE_USER}"
 
 # Cloud KMS Configuration
-export KMS_LOCATION="${KMS_LOCATION}"
-export KMS_KEYRING_NAME="${KMS_KEYRING_NAME}"
-export KMS_KEY_NAME="${KMS_KEY_NAME}"
+export KMS_LOCATION="${KMS_LOCATION_PARSED}"
+export KMS_KEYRING_NAME="${KMS_KEYRING_PARSED}"
+export KMS_KEY_NAME="${KMS_KEY_PARSED}"
 export KMS_KEY_ID="${KMS_KEY_ID}"
 
 # Cloud Storage Configuration (for Terraform state backend)

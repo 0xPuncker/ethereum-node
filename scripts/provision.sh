@@ -198,6 +198,17 @@ fi
 log_info "Using Task for orchestration"
 echo ""
 
+# Run inventory generation to create .envrc
+log_info "Generating Ansible inventory and .envrc from Terraform state..."
+if bash "${ANSIBLE_DIR}/scripts/generate-ansible-inventory.sh"; then
+    log_success "Ansible inventory and .envrc generated successfully."
+else
+    log_error "Failed to generate Ansible inventory. This is a critical step."
+    log_error "Ensure Terraform has been applied and the state file is valid."
+    exit 1
+fi
+echo ""
+
 # Run GCP pre-flight checks (auto-generates .envrc if needed)
 log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 log_info "GCP Environment Setup & Validation"
