@@ -1,0 +1,83 @@
+---
+# Playbook to encrypt and upload validator keys to GCS
+# Prerequisites:
+# 1. Validator keys generated via deposit-cli
+# 2. Cloud KMS keyring and key created
+# 3. GCS bucket created and accessible
+
+- name: Encrypt and Upload Validator Keys to GCS
+  hosts: validator
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - ../roles/kms_secrets/defaults/main.yml
+
+  vars:
+    gcs_encrypted_keys_prefix: "validator-keys/encrypted"
+
+    # Import deposit-cli configuration
+    deposit_cli_workspace_dir: "/var/lib/staking-deposit"
+    deposit_cli_owner: "root"
+    deposit_cli_group: "root"
+
+    # Cleanup settings
+    cleanup_local_encrypted_keys: true
+
+  pre_tasks:
+    - name: Verify gcloud CLI is installed
+      ansible.builtin.command: gcloud --version
+      register: gcloud_version
+      changed_when: false
+      failed_when: gcloud_version.rc != 0
+
+    - name: Display gcloud version
+      ansible.builtin.debug:
+        msg:
+          - "=== gcloud CLI ==="
+          - "Version: {{ gcloud_version.stdout_lines[0] | default('unknown') }}"
+
+    - name: Verify KMS key exists
+      ansible.builtin.command:
+        cmd: >
+          gcloud kms keys describe {{ kms_key_name }}
+          --project="{{ gcp_project_id }}"
+          --location="{{ kms_location }}"
+          --keyring="{{ kms_keyring_name }}"
+      register: kms_key_check
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if KMS key doesn't exist
+      ansible.builtin.fail:
+        msg: |
+          Cloud KMS key not found. Please create it first:
+
+          gcloud kms keys create {{ kms_key_name }} \
+            --project="{{ gcp_project_id }}" \
+            --location="{{ kms_location }}" \
+            --keyring="{{ kms_keyring_name }}" \
+            --purpose=encryption
+      when: kms_key_check.rc != 0
+
+  tasks:
+    - name: Include encryption and upload tasks
+      ansible.builtin.include_tasks: ../roles/generate_validator_keys/tasks/encrypt_and_upload.yml
+
+  post_tasks:
+    - name: Display next steps
+      ansible.builtin.debug:
+        msg:
+          - "=== Validator Keys Uploaded ==="
+          - "Storage:"
+          - "  - gs://{{ gcs_bucket_name }}/{{ gcs_encrypted_keys_prefix }}/"
+          - ""
+          - "Validator lifecycle:"
+          - "  - Download encrypted keys from GCS on startup"
+          - "  - Decrypt with Cloud KMS into tmpfs (/run/validator-keys)"
+          - "  - Clean up decrypted keys on shutdown"
+          - ""
+          - "To start validating:"
+          - "  - sudo systemctl start validator"
+          - "  - sudo systemctl status validator"
+          - "  - sudo journalctl -u validator -f"

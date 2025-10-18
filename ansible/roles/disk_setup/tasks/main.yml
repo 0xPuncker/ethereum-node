@@ -1,0 +1,15 @@
+---
+# Main tasks for disk_setup role
+
+- name: Include detection tasks
+  include_tasks: detect.yml
+
+- name: Include format tasks
+  include_tasks: format.yml
+  when: disk_needs_format
+
+- name: Include mount tasks
+  include_tasks: mount.yml
+
+- name: Include verify tasks
+  include_tasks: verify.yml

@@ -1,0 +1,33 @@
+---
+# Fail2ban configuration
+
+- name: Install fail2ban
+  apt:
+    name: fail2ban
+    state: present
+  when: enable_fail2ban | bool
+
+- name: Configure fail2ban jail.local
+  copy:
+    dest: /etc/fail2ban/jail.local
+    content: |
+      [DEFAULT]
+      bantime = {{ fail2ban_bantime }}
+      findtime = {{ fail2ban_findtime }}
+      maxretry = {{ fail2ban_maxretry }}
+
+      [sshd]
+      enabled = true
+      port = {{ ssh_port }}
+      logpath = /var/log/auth.log
+      maxretry = {{ fail2ban_maxretry }}
+    mode: '0644'
+  when: enable_fail2ban | bool
+  notify: restart fail2ban
+
+- name: Ensure fail2ban is enabled and running
+  systemd:
+    name: fail2ban
+    enabled: yes
+    state: started
+  when: enable_fail2ban | bool

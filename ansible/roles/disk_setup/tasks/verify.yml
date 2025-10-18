@@ -1,0 +1,25 @@
+---
+# Verify disk setup
+
+- name: Get mount information
+  shell: df -h {{ mount_point }}
+  register: df_output
+  changed_when: false
+
+- name: Verify all subdirectories exist
+  stat:
+    path: "{{ mount_point }}/{{ item }}"
+  register: subdir_check
+  loop: "{{ validator_subdirs }}"
+  failed_when: not subdir_check.stat.exists
+
+- name: Display disk setup summary
+  debug:
+    msg:
+      - "=== Disk Setup Complete ==="
+      - "{{ df_output.stdout_lines }}"
+      - "Subdirectories created:"
+      - "  - {{ mount_point }}/nethermind"
+      - "  - {{ mount_point }}/nimbus"
+      - "  - {{ mount_point }}/nimbus_validator"
+      - "  - {{ mount_point }}/secrets"

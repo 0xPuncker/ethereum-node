@@ -1,0 +1,223 @@
+---
+# Bootstrap playbook - Prepares a fresh VM for validator deployment
+# Run this FIRST on a newly created VM before deploy_validator.yml
+#
+# Usage:
+#   ansible-playbook playbooks/bootstrap_vm.yml
+
+- name: Bootstrap Fresh VM for Ethereum Validator
+  hosts: eth_validator
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Display bootstrap information
+      debug:
+        msg:
+          - "=== Ethereum Validator VM Bootstrap ==="
+          - "Host    : {{ inventory_hostname }}"
+          - "Address : {{ ansible_host }}"
+          - "User    : {{ ansible_user }}"
+          - ""
+          - "Bootstrapping steps:"
+          - "  - Refresh system packages and baseline tools"
+          - "  - Install Python runtime and Ansible dependencies"
+          - "  - Verify data disk attachment and readiness"
+          - "  - Validate CPU, memory, and storage requirements"
+          - "  - Prime the VM for validator deployment"
+
+  tasks:
+    - name: Wait for system to be ready
+      wait_for_connection:
+        timeout: 300
+        delay: 5
+
+    - name: Test sudo access
+      command: whoami
+      become: true
+      register: sudo_test
+      changed_when: false
+      failed_when: sudo_test.stdout != "root"
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      retries: 3
+      delay: 10
+
+    - name: Install Python and essential packages
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-apt
+          - python3-setuptools
+          - apt-transport-https
+          - ca-certificates
+          - software-properties-common
+        state: present
+      retries: 3
+      delay: 10
+
+    - name: Upgrade all packages to latest
+      apt:
+        upgrade: dist
+        autoremove: yes
+        autoclean: yes
+      register: upgrade_result
+      retries: 3
+      delay: 10
+
+    - name: Check if reboot is required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+
+    - name: Display reboot requirement
+      debug:
+        msg:
+          - "=== Reboot Required ==="
+          - "A system reboot is required to complete package updates."
+          - "Run: sudo reboot"
+      when: reboot_required_file.stat.exists
+
+    - name: Gather updated facts after package installation
+      setup:
+
+    - name: Verify system meets minimum requirements
+      assert:
+        that:
+          - ansible_processor_vcpus >= 4
+          - (ansible_memtotal_mb / 1024) >= 30
+          - ansible_distribution == "Ubuntu" or ansible_distribution == "Debian"
+          - ansible_distribution_major_version|int >= 20
+        fail_msg: |
+          System does not meet minimum requirements:
+          - CPUs: {{ ansible_processor_vcpus }} (need 4+)
+          - RAM: {{ (ansible_memtotal_mb / 1024) | round(1) }}GB (need 32GB+)
+          - OS: {{ ansible_distribution }} {{ ansible_distribution_version }} (need Ubuntu 20.04+)
+        success_msg: "System meets all minimum requirements"
+
+    - name: Check disk device availability
+      stat:
+        path: "{{ disk_device | default('/dev/sdb') }}"
+      register: disk_check
+
+    - name: Fail if disk device not found
+      fail:
+        msg: |
+          Disk device {{ disk_device | default('/dev/sdb') }} not found!
+
+          Available disks:
+          {{ ansible_devices.keys() | list }}
+
+          Update 'disk_device' in inventory/hosts.yml if using a different disk.
+      when: not disk_check.stat.exists
+
+    - name: Get disk information
+      command: lsblk {{ disk_device | default('/dev/sdb') }} -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT
+      register: disk_info
+      changed_when: false
+      failed_when: false
+
+    - name: Display disk information
+      debug:
+        var: disk_info.stdout_lines
+
+    - name: Check if disk is already mounted
+      shell: mount | grep "{{ disk_device | default('/dev/sdb') }}"
+      register: disk_mounted
+      changed_when: false
+      failed_when: false
+
+    - name: Warn if disk is already mounted
+      debug:
+        msg:
+          - "=== Disk Already Mounted ==="
+          - "Device : {{ disk_device | default('/dev/sdb') }}"
+          - "Mount  : {{ disk_mounted.stdout | default('unknown') }}"
+          - "Note   : Expected when re-running bootstrap after deployment."
+      when: disk_mounted.rc == 0
+
+    - name: Test internet connectivity
+      uri:
+        url: https://api.github.com
+        method: GET
+        timeout: 10
+      register: internet_check
+      failed_when: false
+
+    - name: Fail if no internet connectivity
+      fail:
+        msg: "No internet connectivity detected. Required for downloading clients."
+      when: internet_check.failed or internet_check.status != 200
+
+    - name: Check network ports availability
+      wait_for:
+        port: "{{ item }}"
+        state: stopped
+        timeout: 1
+      register: port_check
+      failed_when: false
+      changed_when: false
+      loop:
+        - 22      # SSH
+        - 30303   # Nethermind P2P
+        - 8545    # Nethermind RPC
+        - 8551    # Engine API
+        - 9000    # Nimbus P2P
+        - 5052    # Nimbus REST
+
+    - name: Display system information
+      debug:
+        msg:
+          - "=== System Snapshot ==="
+          - "OS      : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "Kernel  : {{ ansible_kernel }}"
+          - "CPU     : {{ ansible_processor_vcpus }} cores"
+          - "RAM     : {{ (ansible_memtotal_mb / 1024) | round(1) }}GB"
+          - "Arch    : {{ ansible_architecture }}"
+          - ""
+          - "Disk:"
+          - "{{ disk_info.stdout_lines | map('regex_replace', '^', '  - ') | join('\n') }}"
+          - ""
+          - "Network:"
+          - "  - Hostname: {{ ansible_hostname }}"
+          - "  - Default IPv4: {{ ansible_default_ipv4.address }}"
+          - ""
+          - "Python:"
+          - "  - Version: {{ ansible_python_version }}"
+          - "  - Executable: {{ ansible_python.executable }}"
+
+  post_tasks:
+    - name: Create bootstrap completion marker
+      file:
+        path: /var/tmp/validator-bootstrap-complete
+        state: touch
+        mode: "0644"
+
+    - name: Display bootstrap summary
+      debug:
+        msg:
+          - "=== Bootstrap Summary ==="
+          - "System:"
+          - "  - Packages refreshed"
+          - "  - Python tooling installed"
+          - "  - Requirements validated"
+          - "  - Data disk {{ disk_device | default('/dev/sdb') }} ready"
+          - "  - Internet connectivity confirmed"
+          - "  - Required ports available"
+          - ""
+          - "{{ 'Reboot: Required (run sudo reboot)' if reboot_required_file.stat.exists else 'Reboot: Not required' }}"
+          - ""
+          - "Next Steps:"
+          - "{{ '  1. Reboot the VM: sudo reboot' if reboot_required_file.stat.exists else '  1. Update fee_recipient_address in inventory/hosts.yml' }}"
+          - "{{ '  2. Wait for the VM to return online' if reboot_required_file.stat.exists else '  2. Run main deployment: ansible-playbook playbooks/deploy_validator.yml' }}"
+          - "{{ '  3. Run main deployment: ansible-playbook playbooks/deploy_validator.yml' if reboot_required_file.stat.exists else '' }}"
+          - ""
+          - "Optional phased deployment:"
+          - "  - ansible-playbook playbooks/deploy_validator.yml --tags setup"
+          - "  - ansible-playbook playbooks/deploy_validator.yml --tags nethermind"
+          - "  - ansible-playbook playbooks/deploy_validator.yml --tags nimbus"
+          - "  - ansible-playbook playbooks/deploy_validator.yml --tags services"

@@ -1,0 +1,62 @@
+---
+# Start all validator services in correct order
+# Usage: ansible-playbook playbooks/start_services.yml
+
+- name: Start Ethereum Validator Services
+  hosts: validator
+  become: true
+
+  vars_files:
+    - ../vars/common.yml
+    - "../vars/{{ testnet_network | default('hoodi') }}.yml"
+
+  tasks:
+    - name: Start execution service
+      systemd:
+        name: execution
+        state: started
+
+    - name: Wait for execution to initialize
+      pause:
+        seconds: 15
+
+    - name: Start consensus service
+      systemd:
+        name: consensus
+        state: started
+
+    - name: Wait for consensus to initialize
+      pause:
+        seconds: 20
+
+    - name: Start validator service
+      systemd:
+        name: validator
+        state: started
+      ignore_errors: true
+
+    - name: Wait for validator to initialize
+      pause:
+        seconds: 10
+
+    - name: Verify all services are running
+      systemd:
+        name: "{{ item }}"
+      register: service_status
+      loop:
+        - execution
+        - consensus
+        - validator
+
+    - name: Display service status
+      debug:
+        msg:
+          - "=== Services Started ==="
+          - "  - Execution: {{ service_status.results[0].status.ActiveState }}"
+          - "  - Consensus: {{ service_status.results[1].status.ActiveState }}"
+          - "  - Validator: {{ service_status.results[2].status.ActiveState }}"
+          - ""
+          - "Monitor logs:"
+          - "  - sudo journalctl -fu execution | ccze"
+          - "  - sudo journalctl -fu consensus | ccze"
+          - "  - sudo journalctl -fu validator | ccze"

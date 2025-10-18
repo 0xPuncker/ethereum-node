@@ -1,0 +1,11 @@
+---
+# Default variables for validator_orchestration role
+
+# Health check timeouts
+execution_startup_timeout: 120
+consensus_sync_timeout: 600
+validator_startup_timeout: 60
+
+# Checkpoint sync
+enable_checkpoint_sync: true
+checkpoint_sync_backfill: false

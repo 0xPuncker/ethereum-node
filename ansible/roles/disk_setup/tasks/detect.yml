@@ -1,0 +1,36 @@
+---
+# Detect disk availability and current state
+
+- name: Check if disk device exists
+  stat:
+    path: "{{ disk_device }}"
+  register: disk_stat
+
+- name: Fail if disk does not exist
+  fail:
+    msg: "Disk {{ disk_device }} does not exist. Please verify the device path."
+  when: not disk_stat.stat.exists
+
+- name: Check if disk is already mounted
+  shell: mount | grep "{{ disk_device }}"
+  register: mount_check
+  failed_when: false
+  changed_when: false
+
+- name: Check if disk has a filesystem
+  shell: blkid -o value -s TYPE {{ disk_device }}
+  register: fs_check
+  failed_when: false
+  changed_when: false
+
+- name: Set fact for disk formatting requirement
+  set_fact:
+    disk_needs_format: "{{ fs_check.stdout == '' }}"
+
+- name: Display disk status
+  debug:
+    msg:
+      - "Disk {{ disk_device }} exists: {{ disk_stat.stat.exists }}"
+      - "Disk is mounted: {{ mount_check.rc == 0 }}"
+      - "Disk filesystem: {{ fs_check.stdout if fs_check.stdout != '' else 'none' }}"
+      - "Needs formatting: {{ disk_needs_format }}"

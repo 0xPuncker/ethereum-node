@@ -1,0 +1,14 @@
+---
+# Main tasks for nimbus role
+
+- name: Include installation tasks
+  include_tasks: install.yml
+
+- name: Include beacon configuration tasks
+  include_tasks: configure_beacon.yml
+
+- name: Include validator configuration tasks
+  include_tasks: configure_validator.yml
+
+- name: Include verification tasks
+  include_tasks: verify.yml

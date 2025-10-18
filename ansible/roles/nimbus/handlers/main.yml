@@ -1,0 +1,16 @@
+---
+# Handlers for nimbus role
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart consensus
+  systemd:
+    name: consensus
+    state: restarted
+
+- name: restart validator
+  systemd:
+    name: validator
+    state: restarted

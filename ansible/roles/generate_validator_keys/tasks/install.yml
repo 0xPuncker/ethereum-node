@@ -1,0 +1,83 @@
+---
+# Install EthStaker deposit-cli binaries
+
+- name: Install EthStaker deposit-cli binary
+  vars:
+    deposit_cli_archive_path: "{{ deposit_cli_temp_dir }}/{{ deposit_cli_archive_name }}"
+  block:
+    - name: Ensure python3-mnemonic package is installed
+      ansible.builtin.package:
+        name:
+          - python3-mnemonic
+        state: present
+
+    - name: Ensure installation directory exists
+      ansible.builtin.file:
+        path: "{{ deposit_cli_install_dir }}"
+        state: directory
+        owner: "{{ deposit_cli_owner }}"
+        group: "{{ deposit_cli_group }}"
+        mode: "{{ deposit_cli_mode }}"
+
+    - name: Check current deposit CLI version marker
+      ansible.builtin.stat:
+        path: "{{ deposit_cli_version_file }}"
+      register: deposit_cli_version_stat
+
+    - name: Read installed deposit CLI version
+      ansible.builtin.slurp:
+        src: "{{ deposit_cli_version_file }}"
+      register: deposit_cli_version_marker
+      when: deposit_cli_version_stat.stat.exists
+
+    - name: Determine if deposit CLI install is required
+      ansible.builtin.set_fact:
+        deposit_cli_install_required: "{{ deposit_cli_force_regenerate | bool
+          or (not deposit_cli_version_stat.stat.exists)
+          or (((deposit_cli_version_marker | default({ })).get('content', '') | b64decode | trim) != deposit_cli_version) }}"
+
+    - name: Download EthStaker deposit-cli archive
+      ansible.builtin.get_url:
+        url: "{{ deposit_cli_download_url }}"
+        dest: "{{ deposit_cli_archive_path }}"
+        mode: "0644"
+        checksum: "{{ deposit_cli_checksum }}"
+      when: deposit_cli_install_required
+
+    - name: Extract EthStaker deposit-cli archive to temp directory
+      ansible.builtin.unarchive:
+        src: "{{ deposit_cli_archive_path }}"
+        dest: "{{ deposit_cli_temp_dir }}"
+        remote_src: true
+      when: deposit_cli_install_required
+
+    - name: Move deposit binary to install directory
+      ansible.builtin.copy:
+        src: "{{ deposit_cli_temp_dir }}/{{ deposit_cli_archive_name | regex_replace('\\.tar\\.gz$', '') }}/deposit"
+        dest: "{{ deposit_cli_binary_path }}"
+        owner: "{{ deposit_cli_owner }}"
+        group: "{{ deposit_cli_group }}"
+        mode: "{{ deposit_cli_mode }}"
+        remote_src: true
+      when: deposit_cli_install_required
+
+    - name: Clean up temporary extraction directory
+      ansible.builtin.file:
+        path: "/tmp/{{ deposit_cli_archive_name | regex_replace('\\.tar\\.gz$', '') }}"
+        state: absent
+      when: deposit_cli_install_required
+
+    - name: Record deposit CLI version
+      ansible.builtin.copy:
+        dest: "{{ deposit_cli_version_file }}"
+        content: "{{ deposit_cli_version }}\n"
+        owner: "{{ deposit_cli_owner }}"
+        group: "{{ deposit_cli_group }}"
+        mode: "0644"
+      when: deposit_cli_install_required
+
+    - name: Remove downloaded deposit CLI archive
+      ansible.builtin.file:
+        path: "{{ deposit_cli_archive_path }}"
+        state: absent
+      when: deposit_cli_install_required

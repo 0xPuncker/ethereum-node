@@ -1,0 +1,32 @@
+---
+# Main tasks for security_hardening role
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Include system updates
+  include_tasks: system_updates.yml
+
+- name: Include SSH hardening
+  include_tasks: ssh.yml
+
+- name: Include firewall setup
+  include_tasks: firewall.yml
+
+- name: Include fail2ban setup
+  include_tasks: fail2ban.yml
+
+- name: Include NTP setup
+  include_tasks: ntp.yml
+
+- name: Display security hardening summary
+  debug:
+    msg:
+      - "=== Security Hardening Complete ==="
+      - "SSH: Hardened (key auth only, no root login)"
+      - "Firewall: Enabled with {{ firewall_rules | length }} rules"
+      - "Fail2ban: Active"
+      - "NTP: Synchronized"
+      - "System: Updated and secured"

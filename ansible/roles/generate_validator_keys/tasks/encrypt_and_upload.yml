@@ -1,0 +1,93 @@
+---
+# Encrypt validator keys with Cloud KMS and upload to GCS
+
+- name: Check if validator keys were generated
+  ansible.builtin.stat:
+    path: "{{ deposit_cli_workspace_dir }}/validator_keys"
+  register: validator_keys_check
+
+- name: Fail if no validator keys found
+  ansible.builtin.fail:
+    msg: "No validator keys found in {{ deposit_cli_workspace_dir }}/validator_keys. Please generate keys first using task ansible:staking-deposit"
+  when: not validator_keys_check.stat.exists
+
+- name: Find all keystore JSON files
+  ansible.builtin.find:
+    paths: "{{ deposit_cli_workspace_dir }}/validator_keys"
+    patterns: "keystore-*.json"
+  register: keystore_files
+
+- name: Fail if no keystore files are found
+  ansible.builtin.fail:
+    msg: "No keystore files (keystore-*.json) found in {{ deposit_cli_workspace_dir }}/validator_keys on the remote host. Please ensure the staking-deposit-cli has been run successfully and the keys are present."
+  when: keystore_files.matched == 0
+
+- name: Display keystore files found
+  ansible.builtin.debug:
+    msg:
+      - "Found {{ keystore_files.files | length }} keystore file(s) to encrypt"
+      - "{% for file in keystore_files.files %}{{ file.path }}{% endfor %}"
+
+- name: Ensure encrypted keys directory exists locally
+  ansible.builtin.file:
+    path: "{{ deposit_cli_workspace_dir }}/encrypted"
+    state: directory
+    owner: "{{ deposit_cli_owner }}"
+    group: "{{ deposit_cli_group }}"
+    mode: "0700"
+
+- name: Encrypt each keystore file with Cloud KMS
+  ansible.builtin.command:
+    cmd: >
+      gcloud kms encrypt
+      --project="{{ gcp_project_id }}"
+      --location="{{ kms_location }}"
+      --keyring="{{ kms_keyring_name }}"
+      --key="{{ kms_key_name }}"
+      --plaintext-file="{{ item.path }}"
+      --ciphertext-file="{{ deposit_cli_workspace_dir }}/encrypted/{{ item.path | basename }}.enc"
+  loop: "{{ keystore_files.files }}"
+  register: encrypt_result
+
+- name: Display encryption results
+  ansible.builtin.debug:
+    msg:
+      - "Successfully encrypted {{ keystore_files.files | length }} keystore file(s)"
+      - "Encrypted files location: {{ deposit_cli_workspace_dir }}/encrypted/"
+
+- name: Upload encrypted keys to Google Cloud Storage
+  ansible.builtin.command:
+    cmd: >
+      gcloud storage cp
+      "{{ deposit_cli_workspace_dir }}/encrypted/*.enc"
+      "gs://{{ gcs_bucket_name }}/{{ gcs_encrypted_keys_prefix }}/"
+      --project="{{ gcp_project_id }}"
+  register: upload_result
+
+- name: Verify upload to GCS
+  ansible.builtin.command:
+    cmd: >
+      gcloud storage ls
+      "gs://{{ gcs_bucket_name }}/{{ gcs_encrypted_keys_prefix }}/"
+      --project="{{ gcp_project_id }}"
+  register: gcs_list
+
+- name: Display GCS upload confirmation
+  ansible.builtin.debug:
+    msg:
+      - "=== Validator Keys Successfully Uploaded ==="
+      - "GCS Bucket: gs://{{ gcs_bucket_name }}/{{ gcs_encrypted_keys_prefix }}/"
+      - "Files in GCS:"
+      - "{{ gcs_list.stdout_lines }}"
+      - ""
+      - "Next steps:"
+      - "1. The validator service will auto-decrypt these keys on start"
+      - "2. Decrypted keys will be stored in memory-only tmpfs: /run/validator-keys"
+      - "3. Start validator with: sudo systemctl start validator"
+      - "4. Check status with: sudo systemctl status validator"
+
+- name: Clean up local encrypted files
+  ansible.builtin.file:
+    path: "{{ deposit_cli_workspace_dir }}/encrypted"
+    state: absent
+  when: cleanup_local_encrypted_keys | default(true)

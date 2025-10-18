@@ -1,0 +1,59 @@
+---
+# Stop all validator services gracefully
+# Usage: ansible-playbook playbooks/stop_services.yml
+
+- name: Stop Ethereum Validator Services
+  hosts: eth_validator
+  become: true
+
+  vars_files:
+    - ../vars/common.yml
+    - "../vars/{{ testnet_network | default('hoodi') }}.yml"
+
+  tasks:
+    - name: Stop validator service
+      systemd:
+        name: validator
+        state: stopped
+      ignore_errors: true
+
+    - name: Wait for validator to stop
+      pause:
+        seconds: 5
+
+    - name: Stop consensus service
+      systemd:
+        name: consensus
+        state: stopped
+      ignore_errors: true
+
+    - name: Wait for consensus to stop
+      pause:
+        seconds: 10
+
+    - name: Stop execution service
+      systemd:
+        name: execution
+        state: stopped
+      ignore_errors: true
+
+    - name: Wait for execution to stop
+      pause:
+        seconds: 10
+
+    - name: Verify all services are stopped
+      systemd:
+        name: "{{ item }}"
+      register: service_status
+      loop:
+        - execution
+        - consensus
+        - validator
+
+    - name: Display service status
+      debug:
+        msg:
+          - "=== Services Stopped ==="
+          - "  - Execution: {{ service_status.results[0].status.ActiveState }}"
+          - "  - Consensus: {{ service_status.results[1].status.ActiveState }}"
+          - "  - Validator: {{ service_status.results[2].status.ActiveState }}"

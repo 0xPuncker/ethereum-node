@@ -1,0 +1,32 @@
+---
+# Configure Nimbus beacon node systemd service
+
+- name: Deploy Nimbus beacon systemd service file
+  template:
+    src: consensus.service.j2
+    dest: /etc/systemd/system/consensus.service
+    mode: '0644'
+  notify: reload systemd
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Enable Nimbus beacon service
+  systemd:
+    name: consensus
+    enabled: yes
+
+- name: Display beacon service configuration
+  debug:
+    msg:
+      - "=== Nimbus Beacon Node Configured ==="
+      - "Service: consensus.service"
+      - "Binary: {{ nimbus_beacon_bin }}"
+      - "Data directory: {{ nimbus_data_dir }}"
+      - "Network: {{ testnet_network }}"
+      - "P2P Port: {{ nimbus_p2p_port }}"
+      - "REST API Port: {{ nimbus_rest_port }}"
+      - "Metrics Port: {{ nimbus_metrics_port }}"
+      - "Checkpoint sync: {{ checkpoint_sync_url }}"
+      - "Status: Enabled (not started yet)"

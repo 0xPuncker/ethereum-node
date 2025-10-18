@@ -1,0 +1,60 @@
+---
+# UFW firewall configuration
+
+# CRITICAL: Always allow SSH FIRST to prevent lockout
+- name: Allow SSH before any firewall changes
+  ufw:
+    rule: allow
+    port: "{{ ssh_port }}"
+    proto: tcp
+    comment: "SSH - Critical for remote access"
+  when: enable_firewall | bool
+
+- name: Set UFW default policies (without reset to prevent SSH lockout)
+  ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  loop:
+    - { direction: 'incoming', policy: 'deny' }
+    - { direction: 'outgoing', policy: 'allow' }
+  when: enable_firewall | bool
+
+- name: Configure UFW firewall rules
+  ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ firewall_rules }}"
+  when: enable_firewall | bool
+
+- name: Enable UFW firewall
+  ufw:
+    state: enabled
+  when: enable_firewall | bool
+
+- name: Reload UFW to apply all rules
+  ufw:
+    state: reloaded
+  when: enable_firewall | bool
+
+- name: Wait for SSH connectivity after firewall changes
+  wait_for:
+    port: "{{ ssh_port }}"
+    host: "{{ ansible_host }}"
+    timeout: 30
+    delay: 2
+  delegate_to: localhost
+  become: false
+  when: enable_firewall | bool
+
+- name: Display firewall status
+  command: ufw status verbose
+  register: ufw_status
+  changed_when: false
+  when: enable_firewall | bool
+
+- name: Show firewall configuration
+  debug:
+    var: ufw_status.stdout_lines
+  when: enable_firewall | bool

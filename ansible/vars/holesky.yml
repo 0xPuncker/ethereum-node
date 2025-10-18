@@ -1,0 +1,21 @@
+---
+# Holesky testnet specific variables
+
+testnet_network: "holesky"
+testnet_chain_id: 17000
+
+# Checkpoint sync
+checkpoint_sync_url: "https://holesky.beaconstate.ethstaker.cc"
+
+# Launchpad
+launchpad_url: "https://holesky.launchpad.ethereum.org/"
+
+# Explorer
+explorer_url: "https://holesky.beaconcha.in"
+
+# Deposit requirements
+deposit_amount: "32000000000"  # 32 ETH in Gwei
+
+# Network configuration
+nethermind_network_config: "holesky"
+nimbus_network_config: "holesky"

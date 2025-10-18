@@ -1,0 +1,42 @@
+---
+# Verify Nimbus installation
+
+- name: Check Nimbus beacon binary
+  stat:
+    path: "{{ nimbus_beacon_bin }}"
+  register: beacon_check
+
+- name: Check Nimbus validator binary
+  stat:
+    path: "{{ nimbus_validator_bin }}"
+  register: validator_check
+
+- name: Fail if Nimbus binaries not found
+  fail:
+    msg: "Nimbus binaries not found"
+  when: not beacon_check.stat.exists or not validator_check.stat.exists
+
+- name: Get Nimbus version
+  command: "{{ nimbus_beacon_bin }} --version"
+  register: nimbus_version_output
+  changed_when: false
+  failed_when: false
+
+- name: Check systemd service files
+  stat:
+    path: "{{ item }}"
+  register: service_files
+  loop:
+    - /etc/systemd/system/consensus.service
+    - /etc/systemd/system/validator.service
+
+- name: Display verification results
+  debug:
+    msg:
+      - "=== Nimbus Installation Verified ==="
+      - "Beacon binary: {{ beacon_check.stat.exists }}"
+      - "Validator binary: {{ validator_check.stat.exists }}"
+      - "Version: {{ nimbus_version_output.stdout_lines[0] if nimbus_version_output.stdout_lines else 'Unknown' }}"
+      - "Consensus service: {{ service_files.results[0].stat.exists }}"
+      - "Validator service: {{ service_files.results[1].stat.exists }}"
+      - "Data directories: {{ nimbus_data_dir }}, {{ nimbus_validator_data_dir }}"

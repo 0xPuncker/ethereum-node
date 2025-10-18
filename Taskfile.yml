@@ -1,0 +1,317 @@
+version: "3"
+
+vars:
+  TERRAFORM: "tofu"
+  TERRAFORM_DIR: ./terraform
+  ANSIBLE_DIR: ./ansible
+  SCRIPTS_DIR: "{{.ANSIBLE_DIR}}/scripts"
+  ROOT_SCRIPTS_DIR: "./scripts"
+  ANSIBLE_INVENTORY: "{{.ANSIBLE_DIR}}/inventory/hosts.yml"
+  ANSIBLE_PLAYBOOK: "{{.ANSIBLE_DIR}}/playbooks/provision.yml"
+  ANSIBLE_USER:
+    sh: |
+      if [ -n "${ANSIBLE_USER:-}" ]; then
+        printf '%s\n' "${ANSIBLE_USER}"
+      else
+        user_from_tf="$(cd {{.TERRAFORM_DIR}} >/dev/null 2>&1 && {{.TERRAFORM}} output -raw ansible_user 2>/dev/null || true)"
+        if [ -n "${user_from_tf}" ]; then
+          printf '%s\n' "${user_from_tf}"
+        else
+          printf '%s\n' "root"
+        fi
+      fi
+
+tasks:
+  # OpenTofu (Infrastructure)
+  tf:init:
+    desc: Initialize Terraform
+    dir: "{{.TERRAFORM_DIR}}"
+    cmds:
+      - "{{.TERRAFORM}} init"
+
+  tf:plan:
+    desc: Plan Terraform changes
+    dir: "{{.TERRAFORM_DIR}}"
+    cmds:
+      - "{{.TERRAFORM}} plan"
+
+  tf:apply:
+    desc: Apply Terraform configuration
+    dir: "{{.TERRAFORM_DIR}}"
+    cmds:
+      - "{{.TERRAFORM}} apply -auto-approve"
+
+  tf:destroy:
+    desc: Destroy Terraform infrastructure
+    prompt: "Destroy Terraform infrastructure? Type yes to continue:"
+    dir: "{{.TERRAFORM_DIR}}"
+    cmds:
+      - "{{.TERRAFORM}} destroy"
+
+  tf:output:
+    desc: Show Terraform outputs
+    dir: "{{.TERRAFORM_DIR}}"
+    cmds:
+      - "{{.TERRAFORM}} output"
+
+  # Ansible (Playbooks & inventory)
+  ansible:inventory:generate:
+    desc: Generate Ansible inventory from Terraform outputs
+    cmds:
+      - "{{.SCRIPTS_DIR}}/generate-ansible-inventory.sh"
+
+  ansible:inventory:show:
+    desc: Display current Ansible inventory
+    cmds:
+      - cat "{{.ANSIBLE_INVENTORY}}"
+
+  ansible:inventory:ping:
+    desc: Test Ansible connectivity to hosts
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible eth-validator-vm -i inventory/hosts.yml -m ping
+
+  ansible:bootstrap:
+    desc: Bootstrap fresh VM (run FIRST on new VM)
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/bootstrap_vm.yml -i inventory/hosts.yml
+
+  ansible:bootstrap-check:
+    desc: Run bootstrap playbook in check mode
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/bootstrap_vm.yml -i inventory/hosts.yml --check
+
+  ansible:deploy:
+    desc: Deploy Ethereum validator (main deployment)
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/deploy_validator.yml -i inventory/hosts.yml
+
+  ansible:logs:
+    desc: Tail local Ansible log output
+    cmds:
+      - tail -f /tmp/ansible.log
+
+  ansible:deploy-check:
+    desc: Run deployment playbook in check mode
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/deploy_validator.yml -i inventory/hosts.yml --check
+
+  ansible:deploy-verbose:
+    desc: Run deployment with verbose output
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/deploy_validator.yml -i inventory/hosts.yml -vvv
+
+  ansible:deploy-tags:
+    desc: Run deployment with specific tags (usage - task ansible:deploy-tags -- TAG={setup, nethermind, nimbus or services })
+    dir: "{{.ANSIBLE_DIR}}"
+    vars:
+      CLI_TAG: '{{join " " .CLI_ARGS}}'
+    cmds:
+      - |
+        TAG_VALUE="{{.TAG}}"
+        if [ -z "$TAG_VALUE" ] && [ -n "${TAG:-}" ]; then
+          TAG_VALUE="${TAG}"
+        fi
+        if [ -z "$TAG_VALUE" ] && [ -n "{{.CLI_TAG}}" ]; then
+          TAG_VALUE="{{.CLI_TAG}}"
+        fi
+
+        if [ -z "$TAG_VALUE" ]; then
+          echo "Error: TAG variable required. Example: task ansible:deploy-tags -- TAG=nimbus"
+          exit 1
+        fi
+
+        ansible-playbook playbooks/deploy_validator.yml -i inventory/hosts.yml --tags "$TAG_VALUE"
+
+  ansible:start:
+    desc: Start validator services
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/start_services.yml -i inventory/hosts.yml
+
+  ansible:stop:
+    desc: Stop validator services
+    prompt: "Stop validator services? (yes/no)"
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/stop_services.yml -i inventory/hosts.yml
+
+  ansible:restart:
+    desc: Gracefully restart validator services (stop → start with health checks)
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/restart_services.yml -i inventory/hosts.yml
+
+  ansible:update-validator:
+    desc: Update validator service configuration (graffiti, fee recipient, etc.)
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/update_validator_config.yml -i inventory/hosts.yml
+
+  ansible:validate:
+    desc: Validate deployment and check validator health
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/validate.yml -i inventory/hosts.yml
+
+  ansible:kms-setup:
+    desc: Setup KMS-encrypted key infrastructure
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/setup_kms_keys.yml -i inventory/hosts.yml
+
+  ansible:kms-setup-check:
+    desc: Run KMS setup playbook in check mode
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/setup_kms_keys.yml -i inventory/hosts.yml --check
+
+  ansible:staking-deposit:
+    desc: Install EthStaker deposit-cli and generate validator mnemonic
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/setup_deposit_cli.yml -i inventory/hosts.yml
+
+  ansible:upload-keys:
+    desc: Encrypt and upload validator keys to GCS (run after key generation)
+    dir: "{{.ANSIBLE_DIR}}"
+    cmds:
+      - ansible-playbook playbooks/upload_validator_keys.yml -i inventory/hosts.yml
+
+  ansible:upload-passwords:
+    desc: Encrypt and upload keystore passwords to GCS
+    cmds:
+      - "{{.SCRIPTS_DIR}}/upload-keystore-password.sh"
+
+  # Project scripts
+  scripts:provision:
+    desc: Run local provisioning helper script
+    cmds:
+      - "{{.ROOT_SCRIPTS_DIR}}/provision.sh"
+
+  scripts:check-health:
+    desc: Check validator health via helper script
+    cmds:
+      - "{{.ROOT_SCRIPTS_DIR}}/check-health.sh"
+
+  scripts:start-validator:
+    desc: Start validator using helper script
+    cmds:
+      - "{{.ROOT_SCRIPTS_DIR}}/start-validator.sh"
+
+  # Validator (Service orchestration)
+  validator:start:
+    desc: Start validator services via Ansible
+    cmds:
+      - task: ansible:start
+
+  validator:stop:
+    desc: Stop validator services via Ansible
+    prompt: "Stop validator services on the remote host? (yes/no)"
+    cmds:
+      - task: ansible:stop
+
+  validator:restart:
+    desc: Restart validator services via Ansible
+    cmds:
+      - task: ansible:restart
+
+  validator:upload-keys:
+    desc: Encrypt and upload validator keys to GCS
+    cmds:
+      - task: ansible:upload-keys
+
+  validator:deploy:infra:
+    desc: Provision Terraform infrastructure (init → plan → apply)
+    cmds:
+      - task: tf:init
+      - task: tf:plan
+      - task: tf:apply
+
+  validator:deploy:bootstrap:
+    desc: Generate inventory and bootstrap validator VM
+    cmds:
+      - task: ansible:inventory:generate
+      - task: ansible:bootstrap
+
+  validator:deploy:services:
+    desc: Deploy Ethereum validator services
+    cmds:
+      - task: ansible:deploy
+
+  validator:deploy:keys:
+    desc: Generate keys, encrypt with KMS, upload to GCS (with passwords), and reload validator
+    cmds:
+      - task: ansible:staking-deposit
+      - task: ansible:upload-keys
+      - task: ansible:upload-passwords
+      - task: ansible:deploy-tags
+        vars: { TAG: "nimbus" }
+      - task: ansible:restart
+
+  validator:deploy:finalize:
+    desc: Run post-deployment validation checks
+    cmds:
+      - task: ansible:validate
+
+  validator:logs-execution:
+    desc: Stream execution client (Nethermind) logs
+    cmds:
+      - ssh {{.ANSIBLE_USER}}@$(cd {{.TERRAFORM_DIR}} && tofu output -raw vm_external_ip) 'sudo journalctl -fu execution'
+
+  validator:logs-consensus:
+    desc: Stream consensus client (Nimbus) logs
+    cmds:
+      - ssh {{.ANSIBLE_USER}}@$(cd {{.TERRAFORM_DIR}} && tofu output -raw vm_external_ip) 'sudo journalctl -fu consensus'
+
+  validator:logs:
+    desc: Stream validator client logs
+    cmds:
+      - ssh {{.ANSIBLE_USER}}@$(cd {{.TERRAFORM_DIR}} && tofu output -raw vm_external_ip) 'sudo journalctl -fu validator'
+
+  validator:logs-all:
+    desc: Stream combined validator service logs (execution, consensus, validator)
+    cmds:
+      - ssh {{.ANSIBLE_USER}}@$(cd {{.TERRAFORM_DIR}} && tofu output -raw vm_external_ip) 'sudo journalctl -u execution -u consensus -u validator -f'
+
+  validator:logs-error:
+    desc: Search for errors in validator service logs (last 1 hour)
+    cmds:
+      - ssh {{.ANSIBLE_USER}}@$(cd {{.TERRAFORM_DIR}} && tofu output -raw vm_external_ip) 'sudo journalctl -u execution -u consensus -u validator --since "1 hour ago" | grep -i error'
+
+  validator:deploy:all:
+    desc: Provision infra, configure validator, upload keys, reload validator, and validate
+    cmds:
+      - task: validator:deploy:infra
+      - task: validator:deploy:bootstrap
+      - task: validator:deploy:services
+      - task: validator:deploy:keys
+      - task: validator:deploy:finalize
+
+  # Management (Server: Access, logs, cleanup)
+  vm:ssh:
+    desc: SSH into the validator VM
+    cmds:
+      - ssh {{.ANSIBLE_USER}}@$(cd {{.TERRAFORM_DIR}} && tofu output -raw vm_external_ip)
+
+  vm:logs:kms:
+    desc: Stream KMS key decryption/cleanup logs
+    cmds:
+      - ssh {{.ANSIBLE_USER}}@$(cd {{.TERRAFORM_DIR}} && tofu output -raw vm_external_ip) 'sudo journalctl -t validator-keys -f'
+
+  vm:clean:
+    desc: Remove generated inventory backups and temporary data
+    cmds:
+      - find {{.ANSIBLE_DIR}}/inventory -name "*.backup.*" -type f -delete
+      - echo "Cleaned up inventory backups"
+
+  # Help
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list

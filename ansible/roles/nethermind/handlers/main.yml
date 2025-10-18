@@ -1,0 +1,11 @@
+---
+# Handlers for nethermind role
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart execution
+  systemd:
+    name: execution
+    state: restarted

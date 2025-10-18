@@ -1,0 +1,14 @@
+---
+# Default variables for disk_setup role
+
+disk_device: "/dev/sdb"
+mount_point: "/validator"
+filesystem: "ext4"
+mount_options: "defaults,noatime,nodiratime"
+
+# Subdirectories to create
+validator_subdirs:
+  - "nethermind"
+  - "nimbus"
+  - "nimbus_validator"
+  - "secrets"

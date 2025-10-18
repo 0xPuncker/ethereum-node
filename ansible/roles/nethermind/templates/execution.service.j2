@@ -1,0 +1,46 @@
+[Unit]
+Description=Nethermind Execution Layer Client ({{ testnet_network }})
+Wants=network-online.target
+After=network-online.target
+Documentation=https://docs.nethermind.io/
+
+[Service]
+Type=simple
+User={{ nethermind_user }}
+Group={{ nethermind_group }}
+Restart=always
+RestartSec=3
+WorkingDirectory={{ nethermind_data_dir }}
+Environment="DOTNET_BUNDLE_EXTRACT_BASE_DIR={{ nethermind_data_dir }}/.dotnet"
+
+ExecStart={{ nethermind_install_dir }}/nethermind \
+  --config {{ testnet_network }} \
+  --datadir="{{ nethermind_data_dir }}" \
+  --Network.DiscoveryPort {{ nethermind_p2p_port }} \
+  --Network.P2PPort {{ nethermind_p2p_port }} \
+  --JsonRpc.Enabled true \
+  --JsonRpc.Port {{ nethermind_rpc_port }} \
+  --JsonRpc.Host 127.0.0.1 \
+  --JsonRpc.EnginePort {{ nethermind_engine_port }} \
+  --JsonRpc.EngineHost 127.0.0.1 \
+  --JsonRpc.JwtSecretFile {{ jwt_secret_path }} \
+  --Pruning.Mode={{ nethermind_pruning_mode }} \
+  --Sync.SnapSync true \
+  --Sync.AncientBodiesBarrier 1 \
+  --Sync.AncientReceiptsBarrier 1 \
+  --Metrics.Enabled true \
+  --Metrics.ExposePort {{ nethermind_metrics_port }} \
+  --HealthChecks.Enabled true \
+  --HealthChecks.UIEnabled false
+
+# Resource limits
+LimitNOFILE=65536
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

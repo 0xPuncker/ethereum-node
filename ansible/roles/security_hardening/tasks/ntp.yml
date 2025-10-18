@@ -1,0 +1,38 @@
+---
+# NTP time synchronization with chrony
+
+- name: Install chrony
+  apt:
+    name: chrony
+    state: present
+  when: enable_ntp | bool
+
+- name: Configure chrony NTP servers
+  template:
+    src: chrony.conf.j2
+    dest: /etc/chrony/chrony.conf
+    mode: '0644'
+  when: enable_ntp | bool
+  notify: restart chrony
+
+- name: Ensure chrony is enabled and running
+  systemd:
+    name: chrony
+    enabled: yes
+    state: started
+  when: enable_ntp | bool
+
+- name: Wait for time synchronization
+  command: chronyc tracking
+  register: chrony_status
+  changed_when: false
+  retries: 5
+  delay: 2
+  until: "'Leap status     : Normal' in chrony_status.stdout"
+  when: enable_ntp | bool
+  check_mode: no
+
+- name: Display time synchronization status
+  debug:
+    var: chrony_status.stdout_lines
+  when: enable_ntp | bool

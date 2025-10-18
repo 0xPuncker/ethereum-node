@@ -1,0 +1,89 @@
+---
+# Standalone playbook for setting up KMS key infrastructure
+# This can be run independently to configure key management without full deployment
+# Usage:
+#   ansible-playbook playbooks/setup_kms_keys.yml
+
+- name: Setup KMS-Encrypted Key Infrastructure
+  hosts: eth_validator
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - ../vars/common.yml
+    - "../vars/{{ testnet_network | default('hoodi') }}.yml"
+
+  pre_tasks:
+    - name: Display KMS setup information
+      debug:
+        msg:
+          - "=== KMS Key Management Setup ==="
+          - "Host       : {{ inventory_hostname }}"
+          - "Project    : {{ gcp_project_id | default('not set') }}"
+          - "Keyring    : {{ kms_keyring_name }}"
+          - "Key        : {{ kms_key_name }}"
+          - "GCS Bucket : {{ gcs_bucket_name }}"
+          - ""
+          - "Setup tasks:"
+          - "  - Install Google Cloud SDK"
+          - "  - Mount tmpfs for decrypted keys"
+          - "  - Deploy decrypt/cleanup scripts"
+          - "  - Wire validator service to KMS hooks"
+      tags: always
+
+  roles:
+    - role: kms_secrets
+      tags: [kms, security]
+
+  post_tasks:
+    - name: Verify tmpfs mount
+      command: mountpoint -q {{ validator_keys_decrypted_dir }}
+      register: tmpfs_check
+      failed_when: false
+      changed_when: false
+
+    - name: Verify decryption script exists
+      stat:
+        path: /usr/local/bin/decrypt-validator-keys.sh
+      register: decrypt_script
+
+    - name: Verify cleanup script exists
+      stat:
+        path: /usr/local/bin/cleanup-validator-keys.sh
+      register: cleanup_script
+
+    - name: Display setup results
+      debug:
+        msg:
+          - "=== KMS Setup Summary ==="
+          - "Status:"
+          - "  - tmpfs mount: {{ 'OK' if tmpfs_check.rc == 0 else 'NOT MOUNTED' }}"
+          - "  - Decrypt script: {{ 'OK' if decrypt_script.stat.exists else 'MISSING' }}"
+          - "  - Cleanup script: {{ 'OK' if cleanup_script.stat.exists else 'MISSING' }}"
+          - "  - gcloud CLI: {{ 'OK' if ansible_facts.packages['google-cloud-cli'] is defined else 'CHECK MANUALLY' }}"
+          - ""
+          - "Next steps:"
+          - "  - On local machine: cd /path/to/ethereum-node"
+          - "                      ./scripts/encrypt-and-upload-keys.sh"
+          - "  - Restart validator to load keys: sudo systemctl restart validator"
+          - "  - Monitor key lifecycle: sudo journalctl -t validator-keys -f"
+          - "  - Verify keystore import: curl http://127.0.0.1:5052/eth/v1/keystores"
+      tags: always
+
+    - name: Test GCS access (optional)
+      command: >
+        gcloud storage ls gs://{{ gcs_bucket_name }}/
+        --project={{ gcp_project_id }}
+      register: gcs_test
+      failed_when: false
+      changed_when: false
+      when: gcp_project_id is defined
+
+    - name: Display GCS access test results
+      debug:
+        msg:
+          - "=== GCS Access Test ==="
+          - "Result : {{ 'SUCCESS' if gcs_test.rc == 0 else 'FAILED' }}"
+          - "Details: {{ (gcs_test.stdout if gcs_test.rc == 0 else gcs_test.stderr) | default('No output') }}"
+      when: gcs_test is defined and gcs_test.rc is defined
+      tags: always
