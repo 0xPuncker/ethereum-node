@@ -139,7 +139,64 @@ sudo ./scripts/start-validator.sh
 **Example Output:**
 
 ```
+============================================================
+__________ __  .__
+\_   _____//  |_|  |__   ___________   ____  __ __  _____
+ |    __)_\   __\  |  \_/__ \_  __ \_/ __ \|  |  \/     \
+ |        \|  | |   Y  \  ___/|  | \/  ___/|  |  /  Y Y  /
+/_______  /|__| |___|  /\___  >__|    \___  >____/|__|_|  /
+        \/           \/     \/            \/            \/
+____   ____      .__  .__    .___       __
+\   \ /   /____  |  | |__| __| _/____ _/  |_  ___________
+ \   Y   /\__  \ |  | |  |/ __ |\__  \   __\/  _ \_  __ \
+  \     /  / __ \|  |_|  / /_/ | / __ \|  | (  <_> )  | \/
+   \___/  (____  /____/__\____ |(____  /__|  \____/|__|
+               \/             \/     \/
+============================================================
 
+[INFO] Script: Validator Health Check
+[INFO] Sat Oct 18 02:11:47 CEST 2025
+[INFO] Server: 35.224.213.169
+
+━━━ System Services ━━━
+
+[✓] Execution Layer (Nethermind) is running
+[✓] Consensus Layer (Nimbus Beacon) is running
+[✓] Validator Client (Nimbus Validator) is running
+
+━━━ Execution Layer Status ━━━
+
+[✓] Execution client is fully synced
+[INFO]   Current block: 1435945
+[✓] Connected to 50 execution peers
+
+━━━ Consensus Layer Status ━━━
+
+[⚠] Consensus client is syncing...
+[✓] Connected to 42 consensus peers
+
+━━━ Validator Status ━━━
+
+[⚠] No validator keys found
+[INFO]   Import validator keys to begin validation
+[INFO]   Command: task validator:deploy:keys
+━━━ Resource Usage ━━━
+
+[INFO] Disk usage: 43G/984G (5%)
+[INFO] Memory usage: 6.9Gi/31Gi
+
+━━━ Health Summary ━━━
+
+[⚠] Status: SYNCING
+
+  ⏳ Clients are syncing to network
+  ℹ️  This is normal for new deployments
+
+[INFO] Estimated sync time:
+[INFO]   • Execution client: 2-4 hours (depending on network)
+[INFO]   • Consensus client: 15-30 minutes (with checkpoint sync)
+
+[INFO] Re-run this check periodically to monitor progress
 ```
 
 **Duration:** ~5-10 seconds
