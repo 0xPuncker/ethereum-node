@@ -250,9 +250,9 @@ Edit `ansible/inventory/hosts.yml` to customize:
 ```yaml
 all:
   children:
-    validator_nodes:
+    validator:
       hosts:
-        eth-validator-vm:
+        eth_validator_vm:
           ansible_host: <YOUR_VM_IP> # Change this
           ansible_user: <YOUR_USERNAME> # Change this
 

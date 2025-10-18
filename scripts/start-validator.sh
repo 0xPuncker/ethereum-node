@@ -106,21 +106,21 @@ fi
 log_info "Checking services on ${REMOTE_HOST}..."
 
 # Check execution service
-if ansible validator_nodes -i inventory/hosts.yml -m shell -a "systemctl is-active execution" 2>/dev/null | grep -q "active"; then
+if ansible validator -i inventory/hosts.yml -m shell -a "systemctl is-active execution" 2>/dev/null | grep -q "active"; then
     log_success "✓ Execution client (Nethermind) is running"
 else
     log_error "✗ Execution client is not running"
 fi
 
 # Check consensus service
-if ansible validator_nodes -i inventory/hosts.yml -m shell -a "systemctl is-active consensus" 2>/dev/null | grep -q "active"; then
+if ansible validator -i inventory/hosts.yml -m shell -a "systemctl is-active consensus" 2>/dev/null | grep -q "active"; then
     log_success "✓ Consensus client (Nimbus) is running"
 else
     log_error "✗ Consensus client is not running"
 fi
 
 # Check validator service
-if ansible validator_nodes -i inventory/hosts.yml -m shell -a "systemctl is-active validator" 2>/dev/null | grep -q "active"; then
+if ansible validator -i inventory/hosts.yml -m shell -a "systemctl is-active validator" 2>/dev/null | grep -q "active"; then
     log_success "✓ Validator client is running"
 else
     log_warning "⚠ Validator client is not running (requires keys)"
@@ -140,18 +140,6 @@ log_info "📊 Service Status:"
 echo "  • Execution Layer:  Nethermind (syncing blockchain)"
 echo "  • Consensus Layer:  Nimbus beacon (syncing from checkpoint)"
 echo "  • Validator Client: Ready (requires validator keys)"
-echo ""
-
-log_info "📝 Next Steps:"
-echo "  1. Monitor sync progress:"
-echo "     ssh ${REMOTE_HOST} 'sudo journalctl -fu execution'"
-echo "     ssh ${REMOTE_HOST} 'sudo journalctl -fu consensus'"
-echo ""
-echo "  2. Check health status:"
-echo "     ./scripts/check-health.sh"
-echo ""
-echo "  3. Import validator keys (if not already done):"
-echo "     See ansible/README.md for key import instructions"
 echo ""
 
 log_info "🔍 Monitoring:"
