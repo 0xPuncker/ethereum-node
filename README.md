@@ -51,7 +51,7 @@
 **Deployment:** GCP Compute Engine VM with Ansible automation
 
 <p align="center">
-  <img src="docs/assets/gcp_architecture.png" alt="GCP Architecture" width="350"/>
+  <img src="docs/assets/gcp_architecture.png" alt="GCP Architecture" width="750"/>
 </p>
 
 ## Prerequisites
