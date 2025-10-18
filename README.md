@@ -155,7 +155,7 @@ ____   ____      .__  .__    .___       __
 ============================================================
 
 [INFO] Script: Validator Health Check
-[INFO] Sat Oct 18 02:11:47 CEST 2025
+[INFO] Sat Oct 18 03:30:29 CEST 2025
 [INFO] Server: 35.224.213.169
 
 ━━━ System Services ━━━
@@ -167,23 +167,26 @@ ____   ____      .__  .__    .___       __
 ━━━ Execution Layer Status ━━━
 
 [✓] Execution client is fully synced
-[INFO]   Current block: 1435945
-[✓] Connected to 50 execution peers
+[INFO]   Current block: 1436321
+[✓] Connected to 5 execution peers
 
 ━━━ Consensus Layer Status ━━━
 
 [⚠] Consensus client is syncing...
-[✓] Connected to 42 consensus peers
+[✓] Connected to 12 consensus peers
 
 ━━━ Validator Status ━━━
 
-[⚠] No validator keys found
-[INFO]   Import validator keys to begin validation
-[INFO]   Command: task validator:deploy:keys
+[✓] Found 1 validator key(s)
+
+[⚠] Chain is still syncing
+[INFO]   Validator status will be available once chain is synced
+[INFO]   Validator 1: 0x8a5fb247...b97784
+
 ━━━ Resource Usage ━━━
 
-[INFO] Disk usage: 43G/984G (5%)
-[INFO] Memory usage: 6.9Gi/31Gi
+[INFO] Disk usage: 54G/984G (6%)
+[INFO] Memory usage: 4.7Gi/31Gi
 
 ━━━ Health Summary ━━━
 

@@ -250,6 +250,7 @@ tasks:
       - task: ansible:staking-deposit
       - task: ansible:upload-keys
       - task: ansible:upload-passwords
+      - task: ansible:kms-setup
       - task: ansible:deploy-tags
         vars: { TAG: "nimbus" }
       - task: ansible:restart

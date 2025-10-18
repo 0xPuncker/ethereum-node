@@ -6,7 +6,7 @@
 #   ansible-playbook playbooks/bootstrap_vm.yml
 
 - name: Bootstrap Fresh VM for Ethereum Validator
-  hosts: eth_validator
+  hosts: eth_validator_vm
   become: true
   gather_facts: true
 
@@ -162,12 +162,12 @@
       failed_when: false
       changed_when: false
       loop:
-        - 22      # SSH
-        - 30303   # Nethermind P2P
-        - 8545    # Nethermind RPC
-        - 8551    # Engine API
-        - 9000    # Nimbus P2P
-        - 5052    # Nimbus REST
+        - 22 # SSH
+        - 30303 # Nethermind P2P
+        - 8545 # Nethermind RPC
+        - 8551 # Engine API
+        - 9000 # Nimbus P2P
+        - 5052 # Nimbus REST
 
     - name: Display system information
       debug:
