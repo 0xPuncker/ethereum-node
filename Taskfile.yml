@@ -143,7 +143,6 @@ tasks:
 
   ansible:restart:
     desc: Gracefully restart validator services (stop → start with health checks)
-    prompt: "Restart validator services now? (yes/no)"
     dir: "{{.ANSIBLE_DIR}}"
     cmds:
       - ansible-playbook playbooks/restart_services.yml -i inventory/hosts.yml
@@ -218,8 +217,7 @@ tasks:
       - task: ansible:stop
 
   validator:restart:
-    desc: Restart validator services via Ansible (requires confirmation)
-    prompt: "Restart all validator services via Ansible? (yes/no)"
+    desc: Restart validator services via Ansible
     cmds:
       - task: ansible:restart
 
