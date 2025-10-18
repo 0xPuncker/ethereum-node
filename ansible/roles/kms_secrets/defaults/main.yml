@@ -6,12 +6,12 @@ gcp_project_id: "{{ lookup('env', 'GCP_PROJECT_ID') | default('psychic-sensor-44
 gcp_region: "{{ lookup('env', 'GCP_REGION') | default('us-central1', true) }}"
 
 # KMS Configuration
-kms_keyring_name: "eth-validator-val-keyring"
-kms_key_name: "eth-validator"
+kms_keyring_name: "{{ lookup('env', 'KMS_KEYRING_NAME') | default('eth-validator-keyring', true) }}"
+kms_key_name: "{{ lookup('env', 'KMS_KEY_NAME') | default('eth-validator', true) }}"
 kms_location: "{{ gcp_region }}"
 
 # GCS Bucket for encrypted keys
-gcs_bucket_name: "eth-validator-bucket"
+gcs_bucket_name: "{{ lookup('env', 'VALIDATOR_KEYS_BUCKET') | default('eth-validator-bucket', true) }}"
 gcs_encrypted_keys_prefix: "validator-keys/encrypted"
 
 # Local paths on validator VM

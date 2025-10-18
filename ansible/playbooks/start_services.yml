@@ -3,7 +3,7 @@
 # Usage: ansible-playbook playbooks/start_services.yml
 
 - name: Start Ethereum Validator Services
-  hosts: eth_validator
+  hosts: validator
   become: true
 
   vars_files:

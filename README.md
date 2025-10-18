@@ -50,44 +50,9 @@
 
 **Deployment:** GCP Compute Engine VM with Ansible automation
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│              GCP VM (Ubuntu 24.04 LTS)                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────────────┐     JWT Auth    ┌────────────────┐    │
-│  │   Execution      │◄───────────────►│   Consensus    │    │
-│  │   (Nethermind)   │   Engine API    │   (Nimbus)     │    │
-│  │   Port 8551      │                 │   Beacon Node  │    │
-│  │  • Blockchain DB │                 │                │    │
-│  │  • P2P: 30303    │                 │  • P2P: 9000   │    │
-│  │  • RPC: 8545     │                 │  • API: 5052   │    │
-│  │  • Metrics: 9090 │                 │  • Metrics     │    │
-│  └──────────────────┘                 └────────────────┘    │
-│         │                                     │             │
-│         └─────────────────┬───────────────────┘             │
-│                           │                                 │
-│                           ▼                                 │
-│                  ┌─────────────────┐                        │
-│                  │   Validator     │                        │
-│                  │   (Nimbus)      │                        │
-│                  │                 │                        │
-│                  │  • Validator DB │                        │
-│                  │  • Keys (enc.)  │                        │
-│                  │  • Metrics:8009 │                        │
-│                  └─────────────────┘                        │
-│                                                             │
-│  Storage: /validator (1TB persistent disk)                  │
-│  ├─ /validator/nethermind/     (Execution data)             │
-│  ├─ /validator/nimbus/          (Consensus data)            │
-│  ├─ /validator/nimbus_validator/ (Validator keys)           │
-│  └─ /validator/secrets/         (JWT secret)                │
-│                                                             │
-│  Services: systemd (execution, consensus, validator)        │
-│  Security: SSH hardening, UFW firewall, non-root users       │
-│  Network: Hoodi testnet (public Ethereum testnet)           │
-└─────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="docs/assets/gcp_architecture.png" alt="GCP Architecture" width="350"/>
+</p>
 
 ## Prerequisites
 

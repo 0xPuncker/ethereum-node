@@ -3,13 +3,12 @@
 
 - name: Install EthStaker deposit-cli binary
   vars:
-    deposit_cli_archive_path: "/tmp/{{ deposit_cli_archive_name }}"
+    deposit_cli_archive_path: "{{ deposit_cli_temp_dir }}/{{ deposit_cli_archive_name }}"
   block:
-    - name: Ensure expect and pexpect packages are installed
+    - name: Ensure python3-mnemonic package is installed
       ansible.builtin.package:
         name:
-          - expect
-          - python3-pexpect
+          - python3-mnemonic
         state: present
 
     - name: Ensure installation directory exists
@@ -35,7 +34,7 @@
       ansible.builtin.set_fact:
         deposit_cli_install_required: "{{ deposit_cli_force_regenerate | bool
           or (not deposit_cli_version_stat.stat.exists)
-          or (((deposit_cli_version_marker | default({})).get('content', '') | b64decode | trim) != deposit_cli_version) }}"
+          or (((deposit_cli_version_marker | default({ })).get('content', '') | b64decode | trim) != deposit_cli_version) }}"
 
     - name: Download EthStaker deposit-cli archive
       ansible.builtin.get_url:
@@ -48,13 +47,13 @@
     - name: Extract EthStaker deposit-cli archive to temp directory
       ansible.builtin.unarchive:
         src: "{{ deposit_cli_archive_path }}"
-        dest: "/tmp"
+        dest: "{{ deposit_cli_temp_dir }}"
         remote_src: true
       when: deposit_cli_install_required
 
     - name: Move deposit binary to install directory
       ansible.builtin.copy:
-        src: "/tmp/ethstaker_deposit-cli-b13dcb9-linux-amd64/deposit"
+        src: "{{ deposit_cli_temp_dir }}/{{ deposit_cli_archive_name | regex_replace('\\.tar\\.gz$', '') }}/deposit"
         dest: "{{ deposit_cli_binary_path }}"
         owner: "{{ deposit_cli_owner }}"
         group: "{{ deposit_cli_group }}"
@@ -64,7 +63,7 @@
 
     - name: Clean up temporary extraction directory
       ansible.builtin.file:
-        path: "/tmp/ethstaker_deposit-cli-b13dcb9-linux-amd64"
+        path: "/tmp/{{ deposit_cli_archive_name | regex_replace('\\.tar\\.gz$', '') }}"
         state: absent
       when: deposit_cli_install_required
 
@@ -82,19 +81,3 @@
         path: "{{ deposit_cli_archive_path }}"
         state: absent
       when: deposit_cli_install_required
-
-    - name: Deploy deposit CLI automation script (new mnemonic)
-      ansible.builtin.template:
-        src: staking_deposit_expect.j2
-        dest: "{{ deposit_cli_expect_script }}"
-        owner: "{{ deposit_cli_owner }}"
-        group: "{{ deposit_cli_group }}"
-        mode: "0700"
-
-    - name: Deploy deposit CLI automation script (existing mnemonic)
-      ansible.builtin.template:
-        src: staking_deposit_existing.j2
-        dest: "{{ deposit_cli_expect_script }}-existing"
-        owner: "{{ deposit_cli_owner }}"
-        group: "{{ deposit_cli_group }}"
-        mode: "0700"

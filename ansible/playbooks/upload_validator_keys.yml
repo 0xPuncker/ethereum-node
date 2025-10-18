@@ -6,17 +6,14 @@
 # 3. GCS bucket created and accessible
 
 - name: Encrypt and Upload Validator Keys to GCS
-  hosts: eth_validator
+  hosts: validator
   become: true
   gather_facts: true
 
+  vars_files:
+    - ../roles/kms_secrets/defaults/main.yml
+
   vars:
-    # Import KMS configuration
-    gcp_project_id: "{{ lookup('env', 'GCP_PROJECT_ID') | default('psychic-sensor-440111-i3', true) }}"
-    kms_location: "{{ lookup('env', 'GCP_REGION') | default('us-central1', true) }}"
-    kms_keyring_name: "eth-validator-val-keyring"
-    kms_key_name: "eth-validator"
-    gcs_bucket_name: "eth-validator-bucket"
     gcs_encrypted_keys_prefix: "validator-keys/encrypted"
 
     # Import deposit-cli configuration

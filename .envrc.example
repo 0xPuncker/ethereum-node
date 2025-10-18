@@ -9,20 +9,20 @@
 # Note: .envrc is gitignored to prevent accidental credential exposure
 
 # GCP Project Configuration
-export GCP_PROJECT="your-gcp-project-id"              # Your GCP project ID
-export GCP_PROJECT_NUMBER=""                          # Auto-populated by scripts, leave empty
-export GCP_REGION="us-central1"                       # GCP region for resources
-export GCP_ZONE="us-central1-a"                       # GCP zone for VM
+export GCP_PROJECT="your-gcp-project-id"                   # Your GCP project ID
+export GCP_PROJECT_NUMBER=""                               # Auto-populated by scripts, leave empty
+export GCP_REGION="us-central1"                            # GCP region for resources
+export GCP_ZONE="us-central1-a"                            # GCP zone for VM
 
 # VM Configuration (auto-populated after Terraform runs)
-export VM_EXTERNAL_IP=""                              # Leave empty, populated by Terraform
-export ANSIBLE_USER=""                                # Leave empty, populated by Terraform
+export VM_EXTERNAL_IP=""                                   # Leave empty, populated by Terraform
+export ANSIBLE_USER=""                                     # Leave empty, populated by Terraform
 
 # Cloud KMS Configuration
-export KMS_LOCATION="us-central1"                     # KMS location (usually same as region)
-export KMS_KEYRING="eth-node-keyring"                 # KMS keyring name
-export KMS_KEY="eth-node"                             # KMS crypto key name
-export KMS_KEY_ID=""                                  # Leave empty, populated by Terraform
+export KMS_LOCATION="us-central1"                          # KMS location (usually same as region)
+export KMS_KEYRING_NAME="eth-node-keyring"                 # KMS keyring name
+export KMS_KEY_NAME="eth-node"                             # KMS crypto key name
+export KMS_KEY_ID=""                                       # Leave empty, populated by Terraform
 
 # Cloud Storage Configuration (for Terraform state backend)
 export GCS_BUCKET="eth-node-terraform-state"          # GCS bucket for Terraform state (must be globally unique)

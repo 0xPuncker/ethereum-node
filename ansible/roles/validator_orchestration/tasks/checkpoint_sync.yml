@@ -6,15 +6,6 @@
     path: "{{ nimbus_data_dir }}/db"
   register: nimbus_db
 
-- name: Ensure async directory exists for consensus user
-  file:
-    path: "{{ nimbus_data_dir }}/.ansible_async"
-    state: directory
-    owner: "{{ nimbus_user }}"
-    group: "{{ nimbus_user }}"
-    mode: '0700'
-  when: not nimbus_db.stat.exists
-
 - name: Run Nimbus checkpoint sync
   command: >
     {{ nimbus_beacon_bin }} trustedNodeSync
@@ -24,8 +15,6 @@
     --backfill={{ checkpoint_sync_backfill | lower }}
   become: true
   become_user: "{{ nimbus_user }}"
-  environment:
-    ANSIBLE_ASYNC_DIR: "{{ nimbus_data_dir }}/.ansible_async"
   when: not nimbus_db.stat.exists
   register: checkpoint_result
   async: 1800

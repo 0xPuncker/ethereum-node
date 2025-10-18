@@ -17,6 +17,11 @@
     patterns: "keystore-*.json"
   register: keystore_files
 
+- name: Fail if no keystore files are found
+  ansible.builtin.fail:
+    msg: "No keystore files (keystore-*.json) found in {{ deposit_cli_workspace_dir }}/validator_keys on the remote host. Please ensure the staking-deposit-cli has been run successfully and the keys are present."
+  when: keystore_files.matched == 0
+
 - name: Display keystore files found
   ansible.builtin.debug:
     msg:

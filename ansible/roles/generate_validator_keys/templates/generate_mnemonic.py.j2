@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+
+import secrets
+from mnemonic import Mnemonic
+
+def generate_mnemonic(strength=256):
+    """
+    Generates a new BIP39 mnemonic phrase.
+    """
+    mnemo = Mnemonic("english")
+    # Generate a random seed
+    seed = secrets.token_bytes(strength // 8)
+    # Create the mnemonic
+    mnemonic = mnemo.to_mnemonic(seed)
+    return mnemonic
+
+if __name__ == "__main__":
+    mnemonic_phrase = generate_mnemonic()
+    with open("{{ mnemonic_path }}", "w") as f:
+        f.write(mnemonic_phrase)
+    print(f"Generated mnemonic and saved to {{ mnemonic_path }}")

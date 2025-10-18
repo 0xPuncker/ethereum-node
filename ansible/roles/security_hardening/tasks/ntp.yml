@@ -30,6 +30,7 @@
   delay: 2
   until: "'Leap status     : Normal' in chrony_status.stdout"
   when: enable_ntp | bool
+  check_mode: no
 
 - name: Display time synchronization status
   debug:

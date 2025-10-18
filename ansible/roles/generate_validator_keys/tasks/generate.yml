@@ -15,6 +15,11 @@
     group: "{{ deposit_cli_group }}"
     mode: "{{ deposit_cli_workspace_mode }}"
 
+- name: Check mnemonic file presence
+  ansible.builtin.stat:
+    path: "{{ deposit_cli_mnemonic_path }}"
+  register: deposit_cli_mnemonic_stat
+
 - name: Remove stored mnemonic when forcing regeneration
   ansible.builtin.file:
     path: "{{ deposit_cli_mnemonic_path }}"
@@ -34,6 +39,45 @@
     - deposit_cli_force_regenerate | bool
     - deposit_cli_keys_dir.stat.exists
 
+- name: Reset mnemonic when forcing regeneration
+  ansible.builtin.set_fact:
+    deposit_cli_mnemonic: ""
+  when: deposit_cli_force_regenerate | bool
+
+- name: Generate new mnemonic
+  ansible.builtin.template:
+    src: generate_mnemonic.py.j2
+    dest: "{{ deposit_cli_workspace_dir }}/generate_mnemonic.py"
+    owner: "{{ deposit_cli_owner }}"
+    group: "{{ deposit_cli_group }}"
+    mode: "0700"
+  when:
+    - deposit_cli_mnemonic | length == 0
+    - not deposit_cli_mnemonic_stat.stat.exists
+
+- name: Execute mnemonic generation script
+  ansible.builtin.command:
+    cmd: "{{ deposit_cli_workspace_dir }}/generate_mnemonic.py"
+  register: generate_mnemonic_cmd
+  when:
+    - deposit_cli_mnemonic | length == 0
+    - not deposit_cli_mnemonic_stat.stat.exists
+
+- name: Read mnemonic from file
+  ansible.builtin.slurp:
+    src: "{{ deposit_cli_mnemonic_path }}"
+  register: mnemonic_file_content
+  when:
+    - deposit_cli_mnemonic | length == 0
+    - not deposit_cli_mnemonic_stat.stat.exists
+
+- name: Set mnemonic from file
+  ansible.builtin.set_fact:
+    deposit_cli_mnemonic: "{{ mnemonic_file_content['content'] | b64decode }}"
+  when:
+    - deposit_cli_mnemonic | length == 0
+    - not deposit_cli_mnemonic_stat.stat.exists
+
 - name: Deploy key generation script
   ansible.builtin.template:
     src: generate_keys.sh.j2
@@ -42,49 +86,16 @@
     group: "{{ deposit_cli_group }}"
     mode: "0700"
   when:
-    - deposit_cli_mnemonic | length > 0
     - deposit_cli_force_regenerate | bool or not deposit_cli_keys_dir.stat.exists
 
-- name: Generate validator keys from existing mnemonic
+- name: Generate validator keys from mnemonic
   ansible.builtin.command:
     cmd: "{{ deposit_cli_workspace_dir }}/generate_keys.sh"
   register: deposit_cli_generate_cmd
   no_log: false
   when:
-    - deposit_cli_mnemonic | length > 0
     - deposit_cli_force_regenerate | bool or not deposit_cli_keys_dir.stat.exists
 
-- name: Display key generation output
-  ansible.builtin.debug:
-    msg: "{{ deposit_cli_generate_cmd.stdout_lines }}"
-  when:
-    - deposit_cli_generate_cmd is defined
-    - deposit_cli_generate_cmd.stdout_lines is defined
-
-- name: Generate new mnemonic and validator keys
-  ansible.builtin.command:
-    argv:
-      - "{{ deposit_cli_expect_script }}"
-      - "{{ deposit_cli_binary_path }}"
-      - "{{ deposit_cli_validators | string }}"
-      - "{{ deposit_cli_chain }}"
-      - "{{ deposit_cli_workspace_dir }}"
-      - "{{ fee_recipient_address }}"
-      - "{{ deposit_cli_keystore_password }}"
-      - "{{ deposit_cli_language }}"
-      - "{{ deposit_cli_mnemonic_path }}"
-    chdir: "{{ deposit_cli_workspace_dir }}"
-  no_log: true
-  register: deposit_cli_generate_cmd
-  when:
-    - deposit_cli_mnemonic | length == 0
-    - deposit_cli_force_regenerate | bool or not deposit_cli_keys_dir.stat.exists
-
-- name: Check mnemonic file presence
-  ansible.builtin.stat:
-    path: "{{ deposit_cli_mnemonic_path }}"
-  register: deposit_cli_mnemonic_stat
-  when: deposit_cli_force_regenerate | bool or not deposit_cli_keys_dir.stat.exists
 
 - name: Secure mnemonic file permissions
   ansible.builtin.file:
@@ -99,6 +110,87 @@
   ansible.builtin.set_fact:
     deposit_cli_generated: "{{ deposit_cli_generate_cmd is defined and (deposit_cli_generate_cmd is succeeded) }}"
   when: deposit_cli_force_regenerate | bool or not deposit_cli_keys_dir.stat.exists
+
+- name: Ensure local secure base directory exists
+  ansible.builtin.file:
+    path: "{{ deposit_cli_local_secure_dir }}"
+    state: directory
+    mode: "0700"
+  become: false
+  delegate_to: localhost
+  run_once: true
+  when: deposit_cli_fetch_artifacts | bool
+
+- name: Check for validator keys after generation
+  ansible.builtin.stat:
+    path: "{{ deposit_cli_workspace_dir }}/validator_keys"
+  register: deposit_cli_keys_dir_after
+  when: deposit_cli_fetch_artifacts | bool
+
+- name: Check for mnemonic file after generation
+  ansible.builtin.stat:
+    path: "{{ deposit_cli_mnemonic_path }}"
+  register: deposit_cli_mnemonic_stat_after
+  when: deposit_cli_fetch_artifacts | bool
+
+- name: Ensure local validator keys directory exists
+  ansible.builtin.file:
+    path: "{{ deposit_cli_local_validator_keys_dir }}"
+    state: directory
+    mode: "0700"
+  become: false
+  delegate_to: localhost
+  run_once: true
+  when:
+    - deposit_cli_fetch_artifacts | bool
+    - deposit_cli_keys_dir_after is defined
+    - deposit_cli_keys_dir_after.stat.exists | default(false)
+
+- name: Find validator keystore and deposit data files
+  ansible.builtin.find:
+    paths: "{{ deposit_cli_workspace_dir }}/validator_keys"
+    file_type: file
+    patterns: "*.json"
+  register: deposit_cli_validator_artifacts
+  when:
+    - deposit_cli_fetch_artifacts | bool
+    - deposit_cli_keys_dir_after is defined
+    - deposit_cli_keys_dir_after.stat.exists | default(false)
+
+- name: Store provided mnemonic on remote host for fetching
+  ansible.builtin.copy:
+    content: "{{ deposit_cli_mnemonic }}"
+    dest: "{{ deposit_cli_mnemonic_path }}"
+    owner: "{{ deposit_cli_owner }}"
+    group: "{{ deposit_cli_group }}"
+    mode: "0600"
+  when:
+    - deposit_cli_mnemonic | length > 0
+    - deposit_cli_fetch_artifacts | bool
+    - not deposit_cli_mnemonic_stat.stat.exists
+
+- name: Fetch validator keystores and deposit data
+  ansible.builtin.fetch:
+    src: "{{ item.path }}"
+    dest: "{{ deposit_cli_local_validator_keys_dir }}/{{ item.path | basename }}"
+    flat: true
+  loop: "{{ deposit_cli_validator_artifacts.files }}"
+  when:
+    - deposit_cli_fetch_artifacts | bool
+    - deposit_cli_validator_artifacts is defined
+    - deposit_cli_keys_dir_after is defined
+    - deposit_cli_keys_dir_after.stat.exists | default(false)
+    - deposit_cli_validator_artifacts.matched | default(0) > 0
+
+- name: Fetch mnemonic file to secure storage
+  ansible.builtin.fetch:
+    src: "{{ deposit_cli_mnemonic_path }}"
+    dest: "{{ deposit_cli_local_validator_keys_dir }}/mnemonic.txt"
+    flat: true
+  when:
+    - deposit_cli_fetch_artifacts | bool
+    - deposit_cli_mnemonic_stat_after is defined
+    - deposit_cli_mnemonic_stat_after.stat.exists | default(false)
 
 - name: Display deposit-cli workspace info
   ansible.builtin.debug:

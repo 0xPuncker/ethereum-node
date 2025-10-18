@@ -41,6 +41,9 @@ ssh_root_login: "prohibit-password"
 
 # Essential packages
 essential_packages:
+  - htop
+  - net-tools
+  - vim
   - git
   - curl
   - jq
