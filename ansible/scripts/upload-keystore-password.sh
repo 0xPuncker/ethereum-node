@@ -4,13 +4,13 @@
 
 set -euo pipefail
 
-# Configuration
-GCP_PROJECT="psychic-sensor-440111-i3"
-KMS_KEYRING="eth-validator-val-keyring"
-KMS_KEY="eth-validator"
-KMS_LOCATION="us-central1"
-GCS_BUCKET="eth-validator-bucket"
-GCS_PREFIX="validator-keys/encrypted"
+# Configuration (can be overridden by environment variables)
+GCP_PROJECT="${GCP_PROJECT_ID:-psychic-sensor-440111-i3}"
+KMS_KEYRING="${KMS_KEYRING_NAME:-eth-validator-keyring}"
+KMS_KEY="${KMS_KEY_NAME:-eth-validator}"
+KMS_LOCATION="${KMS_LOCATION:-us-central1}"
+VALIDATOR_KEYS_BUCKET="${VALIDATOR_KEYS_BUCKET:-eth-validator-bucket}"
+VALIDATOR_KEYS_PREFIX="${VALIDATOR_KEYS_PREFIX:-validator-keys/encrypted}"
 
 # Get password from inventory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,11 +33,11 @@ echo "Found keystore password in inventory"
 
 # Get list of keystores from GCS
 echo "Fetching keystore list from GCS..."
-KEYSTORES=$(gcloud storage ls "gs://$GCS_BUCKET/$GCS_PREFIX/" --project="$GCP_PROJECT" 2>/dev/null | grep '\.json\.enc$' || echo "")
+KEYSTORES=$(gcloud storage ls "gs://$VALIDATOR_KEYS_BUCKET/$VALIDATOR_KEYS_PREFIX/" --project="$GCP_PROJECT" 2>/dev/null | grep '\.json\.enc$' || echo "")
 
 if [ -z "$KEYSTORES" ]; then
     echo "ERROR: No keystores found in GCS bucket"
-    echo "Location: gs://$GCS_BUCKET/$GCS_PREFIX/"
+    echo "Location: gs://$VALIDATOR_KEYS_BUCKET/$VALIDATOR_KEYS_PREFIX/"
     exit 1
 fi
 
@@ -65,7 +65,7 @@ for KEYSTORE_PATH in $KEYSTORES; do
 
     echo "  Uploading to GCS..."
     gcloud storage cp "$ENCRYPTED_FILE" \
-        "gs://$GCS_BUCKET/$GCS_PREFIX/${KEYSTORE_NAME}.txt.enc" \
+        "gs://$VALIDATOR_KEYS_BUCKET/$VALIDATOR_KEYS_PREFIX/${KEYSTORE_NAME}.txt.enc" \
         --project="$GCP_PROJECT"
 
     echo "  ✓ Password file uploaded: ${KEYSTORE_NAME}.txt.enc"
@@ -73,7 +73,7 @@ done
 
 echo ""
 echo "✓ All keystore passwords uploaded successfully"
-echo "  Bucket: gs://$GCS_BUCKET/$GCS_PREFIX/"
+echo "  Bucket: gs://$VALIDATOR_KEYS_BUCKET/$VALIDATOR_KEYS_PREFIX/"
 echo ""
 echo "Next step: Restart validator service to load keys"
 echo "  ssh <host> 'sudo systemctl restart validator'"

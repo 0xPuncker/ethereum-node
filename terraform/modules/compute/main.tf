@@ -20,6 +20,12 @@ resource "google_kms_crypto_key_iam_member" "compute_sa" {
   member        = "serviceAccount:${google_service_account.this.email}"
 }
 
+resource "google_project_iam_member" "kms_viewer" {
+  project = var.project_id
+  role    = "roles/cloudkms.viewer"
+  member  = "serviceAccount:${google_service_account.this.email}"
+}
+
 resource "google_compute_disk" "data" {
   name    = "${var.instance_name}-data"
   type    = var.data_disk.type
