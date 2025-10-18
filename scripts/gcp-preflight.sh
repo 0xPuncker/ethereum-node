@@ -127,7 +127,7 @@ else
   log_success "Key created."
 fi
 
-COMPUTE_SA="service-${GCP_PROJECT_ID}@compute-system.iam.gserviceaccount.com"
+COMPUTE_SA="service-${GCP_PROJECT_NUMBER}@compute-system.iam.gserviceaccount.com"
 log_info "Granting KMS crypto roles to ${COMPUTE_SA}..."
 gcloud projects add-iam-policy-binding "${GCP_PROJECT_ID}" \
   --member="serviceAccount:${COMPUTE_SA}" \
