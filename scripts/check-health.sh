@@ -105,17 +105,14 @@ if ! command -v ansible &> /dev/null; then
     exit 1
 fi
 
-# Source .envrc to get environment variables
 if [ -f "${PROJECT_ROOT}/.envrc" ]; then
     source "${PROJECT_ROOT}/.envrc"
 fi
 
-# Use VM_EXTERNAL_IP from environment or try to get from ansible inventory
 if [ -n "${VM_EXTERNAL_IP:-}" ]; then
     REMOTE_HOST="$VM_EXTERNAL_IP"
 else
     cd "${ANSIBLE_DIR}"
-    # Try to extract from generated inventory
     REMOTE_HOST=$(grep -E '^[[:space:]]*ansible_host:[[:space:]]*' inventory/hosts.yml 2>/dev/null | head -n1 | awk '{print $2}' | tr -d '"' || echo "")
 
     if [ -z "$REMOTE_HOST" ]; then
@@ -252,15 +249,20 @@ else
         SYNC_DISTANCE=$(echo "$CONSENSUS_SYNC_RESPONSE" | grep -v "CHANGED\|rc=0\|>>" | awk -F'"' '{for(i=1;i<=NF;i++){if($i=="sync_distance"){print $(i+2)}}}')
 
         if [ -n "$HEAD_SLOT" ] && [ -n "$SYNC_DISTANCE" ] && [ "$SYNC_DISTANCE" != "0" ]; then
-            HEAD_EPOCH=$((HEAD_SLOT / 32))
-            TARGET_SLOT=$((HEAD_SLOT + SYNC_DISTANCE))
-            TARGET_EPOCH=$((TARGET_SLOT / 32))
+            if [ "$SYNC_DISTANCE" -lt 32 ]; then
+                log_info "  Finalizing sync, almost complete..."
+                log_info "  Slots behind: ${SYNC_DISTANCE}"
+            else
+                HEAD_EPOCH=$((HEAD_SLOT / 32))
+                TARGET_SLOT=$((HEAD_SLOT + SYNC_DISTANCE))
+                TARGET_EPOCH=$((TARGET_SLOT / 32))
 
-            SYNC_PERCENT=$(awk "BEGIN {printf \"%.2f\", ($HEAD_SLOT / $TARGET_SLOT) * 100}")
-            log_info "  Sync progress: ${SYNC_PERCENT}%"
-            log_info "  Current slot: ${HEAD_SLOT} (epoch ${HEAD_EPOCH})"
-            log_info "  Target slot: ${TARGET_SLOT} (epoch ${TARGET_EPOCH})"
-            log_info "  Slots behind: ${SYNC_DISTANCE}"
+                SYNC_PERCENT=$(awk "BEGIN {printf \"%.2f\", ($HEAD_SLOT / $TARGET_SLOT) * 100}")
+                log_info "  Sync progress: ${SYNC_PERCENT}%"
+                log_info "  Current slot: ${HEAD_SLOT} (epoch ${HEAD_EPOCH})"
+                log_info "  Target slot: ${TARGET_SLOT} (epoch ${TARGET_EPOCH})"
+                log_info "  Slots behind: ${SYNC_DISTANCE}"
+            fi
         fi
 
         CONSENSUS_SYNC_LOG=$(ansible validator -i inventory/hosts.yml -m shell -a "journalctl -u consensus --since '10 minutes ago' --no-pager | grep ' sync=\"\' | tail -1" 2>/dev/null || echo "")
@@ -291,17 +293,16 @@ echo ""
 
 if [ "$VALIDATOR_RUNNING" = true ]; then
     print_header "━━━ Validator Status ━━━"
-echo ""
 
-    # For Nimbus, check decrypted keys directory directly (keymanager API not enabled by default)
     VALIDATOR_KEYS=$(ssh ${REMOTE_HOST} "sudo find /run/validator-keys -name 'keystore-*.json' -exec basename {} .json \; 2>/dev/null | sed 's/^keystore-//'" 2>/dev/null || echo "")
 
     if [ -z "$VALIDATOR_KEYS" ]; then
+        echo ""
         log_warning "No validator keys found"
         log_info "  Import validator keys to begin validation"
         log_info "  Command: task validator:deploy:keys"
     else
-        KEY_COUNT=$(echo "$VALIDATOR_KEYS" | grep -c .)
+        KEY_COUNT=$(echo "$VALIDATOR_KEYS" | wc -l)
         log_success "Found ${KEY_COUNT} validator key(s)"
         echo ""
 
@@ -376,7 +377,7 @@ echo ""
                     log_info "  Balance: ${BALANCE_ETH} ETH"
 
                     if [ "$VALIDATOR_STATUS" = "active_ongoing" ]; then
-                        log_success "  Validator is active and attesting on slot ${CURRENT_SLOT}"
+                        log_success "${VALIDATOR_NUM} Validator \"${VALIDATOR_PUBKEY}\" is active and attesting on slot ${CURRENT_SLOT}"
 
                         CURRENT_EPOCH_LOCAL=$((CURRENT_SLOT / 32))
                         NEXT_ATTESTATION_EPOCH=$((CURRENT_EPOCH_LOCAL + 1))
@@ -394,29 +395,53 @@ echo ""
             log_warning "Chain is still syncing"
             log_info "  Validator status will be available once chain is synced"
 
+            # Get latest "Slot start" from any relevant unit (compact one-liner to avoid quoting pitfalls)
+            SLOT_LINE=$(ssh "${REMOTE_HOST}" 'sudo journalctl -n 200 --no-pager -q -u validator -u nimbus_validator_client -u consensus -u nimbus_beacon_node | grep -F "Slot start" | tail -1' 2>/dev/null || true)
+
+            SLOT_FROM_LOG=""
+            EPOCH_FROM_LOG=""
+
+            if [ -n "$SLOT_LINE" ]; then
+              SLOT_FROM_LOG=$(printf '%s' "$SLOT_LINE" | sed -E 's/.*slot=([0-9]+).*/\1/')
+              EPOCH_FROM_LOG=$(printf '%s' "$SLOT_LINE" | sed -E 's/.*epoch=([0-9]+).*/\1/')
+            fi
+
+            # Fallbacks: HEAD_SLOT/HEAD_EPOCH from consensus API (computed earlier)
+            if [ -z "$SLOT_FROM_LOG" ] && [ -n "${HEAD_SLOT:-}" ]; then
+              SLOT_FROM_LOG="$HEAD_SLOT"
+            fi
+            # ensure HEAD_EPOCH exists if we have HEAD_SLOT
+            if [ -z "${HEAD_EPOCH:-}" ] && [ -n "${HEAD_SLOT:-}" ]; then
+              HEAD_EPOCH=$((HEAD_SLOT / 32))
+            fi
+            if [ -z "$EPOCH_FROM_LOG" ] && [ -n "${HEAD_EPOCH:-}" ]; then
+              EPOCH_FROM_LOG="$HEAD_EPOCH"
+            elif [ -z "$EPOCH_FROM_LOG" ] && [ -n "$SLOT_FROM_LOG" ]; then
+              EPOCH_FROM_LOG=$((SLOT_FROM_LOG / 32))
+            fi
+
+            # Print when available
+            [ -n "$SLOT_FROM_LOG" ]  && log_info "  Current slot: ${SLOT_FROM_LOG}"
+            [ -n "$EPOCH_FROM_LOG" ] && log_info "  Current epoch: ${EPOCH_FROM_LOG}"
+
+            # List validator keys (use process substitution instead of here-string to avoid parse edge-cases)
             VALIDATOR_NUM=1
             while IFS= read -r KEYSTORE_ID; do
-                if [ -z "$KEYSTORE_ID" ]; then
-                    continue
-                fi
+              [ -z "$KEYSTORE_ID" ] && continue
 
-                # Extract public key from keystore
-                VALIDATOR_PUBKEY_RAW=$(ssh ${REMOTE_HOST} "sudo jq -r '.pubkey' /run/validator-keys/keystore-${KEYSTORE_ID}.json 2>/dev/null" 2>/dev/null || echo "")
+              VALIDATOR_PUBKEY_RAW=$(ssh "${REMOTE_HOST}" "sudo jq -r '.pubkey' /run/validator-keys/keystore-${KEYSTORE_ID}.json 2>/dev/null" 2>/dev/null || echo "")
 
-                if [ -z "$VALIDATOR_PUBKEY_RAW" ]; then
-                    TRUNCATED_KEY="keystore-${KEYSTORE_ID}"
-                else
-                    VALIDATOR_PUBKEY=$(ensure_hex_key "$VALIDATOR_PUBKEY_RAW")
-                    TRUNCATED_KEY=$(truncate_pubkey "$VALIDATOR_PUBKEY")
-                    if [ -z "$TRUNCATED_KEY" ]; then
-                        TRUNCATED_KEY="keystore-${KEYSTORE_ID}"
-                    fi
-                fi
+              if [ -z "$VALIDATOR_PUBKEY_RAW" ]; then
+                TRUNCATED_KEY="keystore-${KEYSTORE_ID}"
+              else
+                VALIDATOR_PUBKEY=$(ensure_hex_key "$VALIDATOR_PUBKEY_RAW")
+                TRUNCATED_KEY=$(truncate_pubkey "$VALIDATOR_PUBKEY")
+                [ -z "$TRUNCATED_KEY" ] && TRUNCATED_KEY="keystore-${KEYSTORE_ID}"
+              fi
 
-                log_info "  Validator ${VALIDATOR_NUM}: ${TRUNCATED_KEY}"
-                VALIDATOR_NUM=$((VALIDATOR_NUM + 1))
-            done <<< "$VALIDATOR_KEYS"
-            echo ""
+              log_info "  Validator ${VALIDATOR_NUM}: ${TRUNCATED_KEY}"
+              VALIDATOR_NUM=$((VALIDATOR_NUM + 1))
+            done < <(printf '%s\n' "$VALIDATOR_KEYS")
         fi
     fi
 fi
@@ -473,8 +498,7 @@ case $OVERALL_HEALTH in
         log_info "Estimated sync time:"
         log_info "  • Execution client: 2-4 hours (depending on network)"
         log_info "  • Consensus client: 15-30 minutes (with checkpoint sync)"
-        echo ""
-        log_info "Re-run this check periodically to monitor progress"
+        log_info "Re-run this check periodically to monitor progress."
         EXIT_CODE=0
         ;;
     2)

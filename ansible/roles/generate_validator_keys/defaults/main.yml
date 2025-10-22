@@ -20,7 +20,7 @@ deposit_cli_chain: "{{ testnet_network | default('hoodi') }}"
 deposit_cli_language: "English"
 deposit_cli_workspace_dir: "/var/lib/staking-deposit"
 deposit_cli_workspace_mode: "0700"
-deposit_cli_keystore_password: ""
+deposit_cli_keystore_password: "{{ deposit_cli_keystore_password }}"
 deposit_cli_force_regenerate: false
 deposit_cli_mnemonic_path: "{{ deposit_cli_workspace_dir }}/mnemonic.txt"
 deposit_cli_mnemonic: "" # Existing mnemonic (24 words) - if provided, will use existing-mnemonic instead of new-mnemonic

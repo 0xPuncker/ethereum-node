@@ -113,6 +113,7 @@ tasks:
       CLI_TAG: '{{join " " .CLI_ARGS}}'
     cmds:
       - |
+        set +x
         TAG_VALUE="{{.TAG}}"
         if [ -z "$TAG_VALUE" ] && [ -n "${TAG:-}" ]; then
           TAG_VALUE="${TAG}"
@@ -125,7 +126,7 @@ tasks:
           echo "Error: TAG variable required. Example: task ansible:deploy-tags -- TAG=nimbus"
           exit 1
         fi
-
+        set -x
         ansible-playbook playbooks/deploy_validator.yml -i inventory/hosts.yml --tags "$TAG_VALUE"
 
   ansible:start:

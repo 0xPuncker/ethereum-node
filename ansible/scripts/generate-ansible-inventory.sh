@@ -229,7 +229,7 @@ export GCS_PREFIX="eth-node/state"
 
 # Validator Keys Storage Configuration
 export VALIDATOR_KEYS_BUCKET="${BUCKET_NAME}"
-export VALIDATOR_KEYS_PREFIX="validator-keys"
+export VALIDATOR_KEYS_PREFIX="validator-keys/encrypted"
 
 # Note: Source this file with 'source .envrc' or use direnv
 EOF

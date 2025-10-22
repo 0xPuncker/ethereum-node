@@ -17,7 +17,7 @@ mkdir -p "$WORKSPACE"
 cd "$WORKSPACE"
 
 # Run deposit-cli with all parameters passed as flags (non-interactive)
-"$DEPOSIT_BIN" \
+echo "no" | "$DEPOSIT_BIN" \
   --non_interactive \
   --language "$LANGUAGE" \
   existing-mnemonic \
@@ -28,8 +28,7 @@ cd "$WORKSPACE"
   --chain "$CHAIN" \
   --folder "$WORKSPACE" \
   --execution_address "$FEE_RECIPIENT" \
-  --keystore_password "$KEYSTORE_PASSWORD" \
-  --regular-withdrawal
+  --keystore_password "$KEYSTORE_PASSWORD"
 
 # Check if keys were generated
 if [ -d "$WORKSPACE/validator_keys" ]; then

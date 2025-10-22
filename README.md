@@ -155,8 +155,8 @@ ____   ____      .__  .__    .___       __
 ============================================================
 
 [INFO] Script: Validator Health Check
-[INFO] Sat Oct 18 03:30:29 CEST 2025
-[INFO] Server: 35.224.213.169
+[INFO] Wed Oct 22 13:52:17 CEST 2025
+[INFO] Server: 34.44.182.36
 
 ━━━ System Services ━━━
 
@@ -167,26 +167,26 @@ ____   ____      .__  .__    .___       __
 ━━━ Execution Layer Status ━━━
 
 [✓] Execution client is fully synced
-[INFO]   Current block: 1436321
-[✓] Connected to 5 execution peers
+[INFO]   Current block: 1466445
+[✓] Connected to 50 execution peers
 
 ━━━ Consensus Layer Status ━━━
 
 [⚠] Consensus client is syncing...
-[✓] Connected to 12 consensus peers
+[✓] Connected to 47 consensus peers
 
 ━━━ Validator Status ━━━
-
-[✓] Found 1 validator key(s)
+[✓] Found        1 validator key(s)
 
 [⚠] Chain is still syncing
 [INFO]   Validator status will be available once chain is synced
+[INFO]   Current slot: 1576713
+[INFO]   Current epoch: 49272
 [INFO]   Validator 1: 0x8a5fb247...b97784
-
 ━━━ Resource Usage ━━━
 
-[INFO] Disk usage: 54G/984G (6%)
-[INFO] Memory usage: 4.7Gi/31Gi
+[INFO] Disk usage: 59G/984G (7%)
+[INFO] Memory usage: 5.3Gi/31Gi
 
 ━━━ Health Summary ━━━
 
@@ -198,8 +198,7 @@ ____   ____      .__  .__    .___       __
 [INFO] Estimated sync time:
 [INFO]   • Execution client: 2-4 hours (depending on network)
 [INFO]   • Consensus client: 15-30 minutes (with checkpoint sync)
-
-[INFO] Re-run this check periodically to monitor progress
+[INFO] Re-run this check periodically to monitor progress.
 ```
 
 **Duration:** ~5-10 seconds

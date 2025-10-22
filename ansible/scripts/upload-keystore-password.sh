@@ -10,7 +10,7 @@ KMS_KEYRING="${KMS_KEYRING_NAME:-eth-validator-keyring}"
 KMS_KEY="${KMS_KEY_NAME:-eth-validator}"
 KMS_LOCATION="${KMS_LOCATION:-us-central1}"
 VALIDATOR_KEYS_BUCKET="${VALIDATOR_KEYS_BUCKET:-eth-validator-bucket}"
-VALIDATOR_KEYS_PREFIX="${VALIDATOR_KEYS_PREFIX:-validator-keys/encrypted}"
+VALIDATOR_KEYS_PREFIX="validator-keys/encrypted"
 
 # Get password from inventory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
